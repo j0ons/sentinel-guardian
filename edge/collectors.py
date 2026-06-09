@@ -22,14 +22,24 @@ from dataclasses import dataclass, field
 
 import psutil
 
-# Allow running this file directly (python collectors.py) or as part of the package.
-try:
-    from src.memory import Event
-except ImportError:  # when src/ is on the path
-    import os
-    import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-    from memory import Event
+
+@dataclass
+class Event:
+    """One thing Sentinel perceived on the edge.
+
+    Defined here (not imported from src.memory) so the edge node stays minimal — it only
+    needs psutil + requests, never the cloud's LLM/DB dependencies. The cloud's
+    src.memory.Event mirrors this shape; events cross the wire as plain JSON anyway.
+    """
+    ts: float
+    kind: str
+    summary: str
+    detail: dict = field(default_factory=dict)
+    host: str = "edge-0"
+
+    def to_text(self) -> str:
+        return f"[{self.kind}] {self.summary}"
+
 
 HOST = socket.gethostname()
 
