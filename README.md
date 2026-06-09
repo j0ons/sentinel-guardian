@@ -30,9 +30,25 @@ See `docs/01-ARCHITECTURE.md`.
 - `docs/03-PLAN.md` — 30-day milestone plan with weekly gates.
 - `docs/04-DEMO.md` — video script + submission checklist.
 
+## Quick start
+
+```
+# 1. cloud brain (Mac, terminal 1)
+./scripts/start-cloud.sh
+# 2. live decision feed (Mac, terminal 2)
+./scripts/start-dashboard.sh
+# 3. edge agent (Pi):  SENTINEL_CLOUD=http://<mac-ip>:8000 python3 edge/runner.py
+# demo graph anytime:  ./scripts/demo-replay.sh 6
+```
+
+See `docs/TONIGHT.md` for the full Pi bring-up.
+
 ## Status
 
-Week 0 — setup. See `docs/TODO-TODAY.md`.
+Week 1–2 done early. Full loop built & tested offline (SIM mode): edge perception →
+cloud agent → tools → 3-tier memory → nightly consolidation. False-alarm rate falls
+100%→0% over 6 days, threat caught every day. Pi deployment kit ready (`docs/TONIGHT.md`).
+Next: run on the Pi tonight; flip to live qwen3.7-max when credits land.
 
 ## License
 

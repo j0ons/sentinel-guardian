@@ -7,3 +7,5 @@ venv/
 data/
 *.jsonl
 *.db
+.venv-edge/
+edge/outbox.jsonl
