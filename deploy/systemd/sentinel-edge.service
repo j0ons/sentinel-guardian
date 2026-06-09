@@ -1,0 +1,17 @@
+[Unit]
+Description=Sentinel edge agent (treated as the Pi)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/sentinel/edge
+Environment=SENTINEL_CLOUD=http://10.10.10.201:8000
+Environment=SENTINEL_INTERVAL=5
+ExecStart=/root/sentinel/.venv/bin/python runner.py
+Restart=always
+RestartSec=3
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target

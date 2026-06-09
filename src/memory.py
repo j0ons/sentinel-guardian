@@ -48,6 +48,10 @@ class Memory:
         # all DB access behind a single lock, so cross-thread reuse is safe here.
         self.db = sqlite3.connect(db_path, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
+        # WAL: durable across crashes/restarts and lets reads not block the serialized writes.
+        if db_path != ":memory:":
+            self.db.execute("PRAGMA journal_mode=WAL")
+            self.db.execute("PRAGMA synchronous=NORMAL")
         self.archive_path = archive_path
         self._init_schema()
 

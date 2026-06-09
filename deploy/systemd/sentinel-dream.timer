@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Sentinel consolidation every night (the self-improvement loop)
+
+[Timer]
+# Every night at 03:00. Sentinel "sleeps on" the day and wakes up with a sharper baseline.
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+RandomizedDelaySec=120
+
+[Install]
+WantedBy=timers.target

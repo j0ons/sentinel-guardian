@@ -1,0 +1,7 @@
+[Unit]
+Description=Sentinel watchdog — restart cloud brain if /health is unresponsive
+
+[Service]
+Type=oneshot
+# If the brain is alive but hung (not answering HTTP within 8s), restart it.
+ExecStart=/bin/bash -c 'curl -fsS --max-time 8 http://127.0.0.1:8000/health >/dev/null || (echo "watchdog: /health failed, restarting sentinel-cloud" && systemctl restart sentinel-cloud)'

@@ -1,0 +1,19 @@
+[Unit]
+Description=Sentinel cloud brain (Qwen-powered guardian)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/sentinel/src
+# SIM mode until Qwen credits land. To go live: add QWEN_API_KEY to /root/sentinel/.env,
+# set SENTINEL_SIM=0 below, then: systemctl daemon-reload && systemctl restart sentinel-cloud
+Environment=SENTINEL_SIM=1
+ExecStart=/root/sentinel/.venv/bin/python -m uvicorn server:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=3
+# self-healing: if it dies >5x in 60s, still keep trying (don't give up)
+StartLimitIntervalSec=0
+
+[Install]
+WantedBy=multi-user.target

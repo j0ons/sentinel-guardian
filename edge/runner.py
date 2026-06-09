@@ -82,20 +82,28 @@ def main():
     prev = collectors.snapshot()
     while True:
         time.sleep(INTERVAL)
-        flush_buffer()
-        now = collectors.snapshot()
-        events = collectors.diff_events(prev, now)
-        prev = now
+        try:
+            flush_buffer()
+            now = collectors.snapshot()
+            events = collectors.diff_events(prev, now)
+            prev = now
+        except Exception as e:                 # never let a bad snapshot kill the agent
+            print(f"  [warn] snapshot/diff error, skipping cycle: {e}", flush=True)
+            continue
+
         for ev in events:
-            ent = collectors.event_entity(ev)
-            payload = {"kind": ev.kind, "summary": ev.summary, "detail": ev.detail,
-                       "host": HOST, "entity": list(ent) if ent else None}
-            decision = post_event(payload)
-            if decision is None:
-                buffer_event(payload)
-                print(f"  [buffered] {ev.to_text()}")
-            else:
-                apply_action(decision)
+            try:
+                ent = collectors.event_entity(ev)
+                payload = {"kind": ev.kind, "summary": ev.summary, "detail": ev.detail,
+                           "host": HOST, "entity": list(ent) if ent else None}
+                decision = post_event(payload)
+                if decision is None:
+                    buffer_event(payload)
+                    print(f"  [buffered] {ev.to_text()}", flush=True)
+                else:
+                    apply_action(decision)
+            except Exception as e:             # one bad event must not stop the rest
+                print(f"  [warn] failed handling event {ev.to_text()}: {e}", flush=True)
 
 
 if __name__ == "__main__":

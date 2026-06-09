@@ -49,12 +49,21 @@ def health():
 
 @app.post("/event")
 def ingest(ev: EventIn):
-    """Receive one edge event, reason about it, return the action to take."""
+    """Receive one edge event, reason about it, return the action to take.
+
+    Never 500s on a single bad event: any failure degrades to a safe 'alert_user' so the
+    edge keeps a clean request/response contract and the deployment stays up unattended.
+    """
     event = Event(ts=time.time(), kind=ev.kind, summary=ev.summary,
                   detail=ev.detail, host=ev.host)
     entity = tuple(ev.entity) if ev.entity else None
-    with LOCK:
-        out = AGENT.decide(event, entity=entity)
+    try:
+        with LOCK:
+            out = AGENT.decide(event, entity=entity)
+    except Exception as e:
+        out = {"event": event.to_text(), "action": "alert_user",
+               "reason": f"decision error (safe default): {e}", "result": {"ok": False},
+               "live": is_live()}
     record = {"ts": time.time(), **out}
     FEED.append(record)
     return record
