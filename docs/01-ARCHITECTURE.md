@@ -1,5 +1,15 @@
 # SENTINEL — Architecture
 
+> **DIRECTION (locked 9 Jun):** System/network guardian — *not* a camera.
+> Sentinel watches a host's process / network / log activity (edge SOC), learns each
+> machine's "normal," and self-heals anomalies. Plays to Mohamed's CCNA/CCNP/CyberOps
+> expertise; logs/metrics are deterministic → the replay harness can synthesize weeks of
+> activity in seconds, making the "it gets smarter" curve fast and bulletproof.
+> In the diagram below, "sensors" = process/conn/log collectors, "perception" = event
+> extraction (no captioning/vision needed), "actuate" = kill-process / block-IP / alert.
+> Visual demo assets: (1) a live terminal dashboard of Sentinel reasoning out loud,
+> (2) the nightly "dreaming" baseline-rewrite log + falling false-alarm graph.
+
 ## System overview
 
 ```
