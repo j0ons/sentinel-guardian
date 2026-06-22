@@ -23,12 +23,22 @@ See `docs/01-ARCHITECTURE.md`.
 - **Long-horizon tool-calling** for perpetual perceive→act autonomy.
 - **Nightly consolidation** with qwen3.7-max — the self-improvement loop and the novel core.
 
+## A physical edge device
+
+Sentinel runs on a **Raspberry Pi** and acts on its own hardware: a 3-LED + buzzer status head
+on GPIO fires the verdict locally — green (normal), amber (alert), **red + buzzer (threat
+actuated)** — with no screen and independent of the network. Off a Pi the GPIO layer is a
+silent no-op, so the same edge runner works on a Mac/container too (graceful degradation by
+construction). Wiring + BOM: `docs/06-HARDWARE.md`. Privacy model: `docs/02-PRIVACY.md`.
+
 ## Docs
 
 - `docs/00-STRATEGY.md` — why this wins, the multi-entry play, risks.
 - `docs/01-ARCHITECTURE.md` — system design, memory tiers, edge/cloud split.
-- `docs/03-PLAN.md` — 30-day milestone plan with weekly gates.
-- `docs/04-DEMO.md` — video script + submission checklist.
+- `docs/02-PRIVACY.md` — what stays on the edge, what crosses the wire, retention.
+- `docs/04-DEMO.md` — the real memory-recall demo, video script, submission checklist.
+- `docs/05-WRITEUP.md` — the Devpost submission write-up.
+- `docs/06-HARDWARE.md` — the Pi, GPIO wiring, physical signals.
 
 ## Quick start
 

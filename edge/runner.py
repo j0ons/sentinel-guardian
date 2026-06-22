@@ -23,6 +23,7 @@ import time
 import requests
 
 import collectors
+import gpio                                  # physical actuation layer (no-op off a Pi)
 
 CLOUD = os.getenv("SENTINEL_CLOUD", "http://127.0.0.1:8000").rstrip("/")
 INTERVAL = float(os.getenv("SENTINEL_INTERVAL", "5"))
@@ -71,12 +72,24 @@ def flush_buffer():
 
 
 def apply_action(decision: dict):
-    """Execute the cloud's decision locally. Actuation is handled server-side in dry-run;
-    here we just surface it. Real local enforcement (nftables/kill) would live here when armed."""
+    """Execute the cloud's decision locally — including PHYSICAL signalling on the Pi.
+
+    The cloud reasons; the edge device acts on its own hardware. This is the local-actuation
+    half of the perceive->reason->act loop: a `mark_normal` blinks the status LED green-ish,
+    an `alert_user` raises the amber alert line, and an `actuate` (high-confidence threat)
+    fires the red LED + buzzer so the threat is visible/audible at the device itself —
+    independent of any screen or network. On non-Pi hosts gpio.* are safe no-ops."""
     action = decision.get("action")
     reason = decision.get("reason", "")
     tag = {"mark_normal": "ok ", "alert_user": "ALERT", "actuate": "ACT!"}.get(action, "?")
     print(f"  [{tag}] {decision.get('event','')}  ->  {action}  ({reason})")
+
+    if action == "actuate":
+        gpio.threat()                          # red LED solid + buzzer pulse
+    elif action == "alert_user":
+        gpio.alert()                           # amber LED blink
+    else:
+        gpio.heartbeat_ok()                    # brief green tick — system alive & calm
 
 
 def main():
