@@ -45,10 +45,20 @@ See `docs/TONIGHT.md` for the full Pi bring-up.
 
 ## Status
 
-Week 1–2 done early. Full loop built & tested offline (SIM mode): edge perception →
-cloud agent → tools → 3-tier memory → nightly consolidation. False-alarm rate falls
-100%→0% over 6 days, threat caught every day. Pi deployment kit ready (`docs/TONIGHT.md`).
-Next: run on the Pi tonight; flip to live qwen3.7-max when credits land.
+**LIVE on real qwen3.7-max**, deployed on Proxmox and watchable over Tailscale. Full loop
+runs end-to-end: edge perception → cloud agent → tools → 3-tier memory → nightly
+consolidation.
+
+The headline demo is **memory-grounded judgment** (`src/demo_recall.py`): the same ambiguous
+event (`:9000`) is judged *alert* on a cold host and *normal* once the agent has learned the
+host's context — qwen3.7-max recalls it as the restic backup's backend. A genuine reverse
+shell (`:4444` Tor exit) is neutralized even on a fully-trusting host, because a deterministic
+**safety floor** keeps attack signatures from ever being normalized. See `docs/04-DEMO.md`.
+
+> Note: the earlier "false alarms fall 100%→0%" pitch did **not** reproduce — qwen3.7-max is
+> well-calibrated on day 1, so there's no curve to show. Live testing also surfaced (and we
+> fixed) a real bug where over-broad consolidation could miss a threat. The honest
+> memory-recall story is stronger anyway.
 
 ## License
 
