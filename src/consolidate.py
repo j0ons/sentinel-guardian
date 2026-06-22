@@ -25,7 +25,22 @@ benign. Fold in anything that has now been seen many times without incident. Kee
 and operational. This baseline will be the agent's reference tomorrow, so being precise here
 directly reduces false alarms.
 
+CRITICAL: NEVER add attack signatures to the normal baseline, no matter how often they were
+seen. Connections to ephemeral high ports (4444, 1337, 31337…), known-bad destinations
+(Tor exits), or reverse-shell/C2 patterns are NEVER normal — frequency does not make an
+attack benign. The baseline must keep scrutinizing these. Repeated exposure to a threat is a
+persistent attack, not a new normal.
+
 Return ONLY the new baseline text."""
+
+# Entity-key substrings that must NEVER be auto-promoted to known-normal, no matter how
+# often they are seen. The deterministic safety floor for the dreaming pass — a guard
+# against "seen-it-a-lot → trust-it" eroding threat sensitivity.
+THREAT_PORT_MARKERS = (":4444:", ":1337:", ":31337:", ":5555:", ":6667:")
+
+
+def _is_threat_entity(name: str) -> bool:
+    return any(m in name for m in THREAT_PORT_MARKERS)
 
 
 def consolidate(memory: Memory, host: str = "edge-0",
@@ -61,7 +76,8 @@ def consolidate(memory: Memory, host: str = "edge-0",
 
     if not new_baseline or not is_live():
         # STUB / empty: synthesize a deterministic baseline so the loop is testable offline.
-        frequent = [r["name"] for r in entities if r["seen_count"] >= promote_after]
+        frequent = [r["name"] for r in entities
+                    if r["seen_count"] >= promote_after and not _is_threat_entity(r["name"])]
         new_baseline = (
             f"Baseline v{prev_version + 1} (auto). Routinely-seen, benign on this host: "
             + (", ".join(frequent) if frequent else "(still learning)")
@@ -71,9 +87,12 @@ def consolidate(memory: Memory, host: str = "edge-0",
     new_version = prev_version + 1
     memory.save_baseline(new_version, new_baseline, host)
 
-    # promote frequently-seen, never-alerted entities to known-normal
+    # promote frequently-seen, never-alerted entities to known-normal — but NEVER promote a
+    # threat-signature entity, however often it appears (the safety floor).
     promoted = 0
     for r in entities:
+        if _is_threat_entity(r["name"]):
+            continue
         if r["seen_count"] >= promote_after and not r["normal"]:
             memory.db.execute("UPDATE entities SET normal=1 WHERE name=?", (r["name"],))
             promoted += 1

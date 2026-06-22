@@ -29,9 +29,19 @@ for genuinely unusual activity, and reserve `actuate` for high-confidence malici
 that contradicts the baseline (e.g. an unknown process opening an unexpected listening port
 or connecting to a suspicious endpoint).
 
+NON-NEGOTIABLE SAFETY FLOOR — a permissive baseline NEVER overrides these. Even if the host
+looks quiet and most activity is normal, ALWAYS treat the following as a threat and `actuate`
+(or at minimum `alert_user` with severity=medium), regardless of what the baseline says:
+  - outbound connections to ephemeral/uncommon high ports (e.g. 4444, 1337, 31337) to an
+    unknown or external destination — classic reverse-shell / C2 signature;
+  - a connection to a known-bad destination (Tor exits, flagged IPs);
+  - an unknown process opening a listener or spawning a shell with network egress.
+A baseline describes routine BENIGN activity; it is not a license to ignore attack
+signatures. When the signature above is present, the threat verdict wins — full stop.
+
 Always choose exactly ONE tool. Prefer `mark_normal` when the event fits the learned
-baseline. Your goal over time is to drive false alarms toward zero while never missing a
-real threat."""
+baseline AND shows no attack signature. Your goal over time is to drive false alarms toward
+zero while NEVER missing a real threat — missing a threat is far worse than a false alarm."""
 
 
 class SentinelAgent:
