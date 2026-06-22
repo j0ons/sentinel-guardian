@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1020"/>
+      <stop offset="1" stop-color="#11162b"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#13314a"/>
+      <stop offset="1" stop-color="#0e2336"/>
+    </linearGradient>
+    <linearGradient id="cloud" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3a2150"/>
+      <stop offset="1" stop-color="#241138"/>
+    </linearGradient>
+    <linearGradient id="dream" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6d28d9"/>
+      <stop offset="1" stop-color="#9333ea"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#7dd3fc"/>
+    </marker>
+    <marker id="arrowback" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#fca5a5"/>
+    </marker>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="760" fill="url(#bg)"/>
+
+  <!-- Title -->
+  <text x="60" y="58" fill="#f8fafc" font-size="34" font-weight="700">Sentinel</text>
+  <text x="190" y="58" fill="#94a3b8" font-size="20">— a self-improving edge guardian on Qwen Cloud</text>
+  <text x="60" y="86" fill="#a78bfa" font-size="16" font-style="italic">Most agents forget. Sentinel sleeps on it and wakes up sharper.</text>
+
+  <!-- EDGE panel -->
+  <g filter="url(#soft)">
+    <rect x="60" y="120" width="300" height="560" rx="18" fill="url(#edge)" stroke="#2563eb" stroke-opacity="0.4"/>
+  </g>
+  <text x="84" y="156" fill="#7dd3fc" font-size="18" font-weight="700">EDGE</text>
+  <text x="84" y="178" fill="#94a3b8" font-size="13">Raspberry Pi / Proxmox container</text>
+  <text x="84" y="196" fill="#64748b" font-size="12">cheap, always-on, change-driven</text>
+
+  <g fill="#0e2336" stroke="#3b82f6" stroke-opacity="0.5">
+    <rect x="84" y="222" width="252" height="64" rx="10"/>
+    <rect x="84" y="306" width="252" height="64" rx="10"/>
+    <rect x="84" y="390" width="252" height="64" rx="10"/>
+  </g>
+  <text x="100" y="248" fill="#e2e8f0" font-size="15" font-weight="600">Sensors</text>
+  <text x="100" y="270" fill="#94a3b8" font-size="12">processes · connections · logins · logs</text>
+  <text x="100" y="332" fill="#e2e8f0" font-size="15" font-weight="600">Perception</text>
+  <text x="100" y="354" fill="#94a3b8" font-size="12">diff to events — only on change</text>
+  <text x="100" y="416" fill="#e2e8f0" font-size="15" font-weight="600">Uplink + heartbeat</text>
+  <text x="100" y="438" fill="#94a3b8" font-size="12">compact JSON over HTTPS</text>
+
+  <text x="84" y="500" fill="#fca5a5" font-size="14" font-weight="600">◄ Action commands</text>
+  <text x="84" y="522" fill="#94a3b8" font-size="12">alert · actuate (kill/block) · log</text>
+
+  <text x="84" y="600" fill="#64748b" font-size="12">Cheap models stay here:</text>
+  <text x="84" y="620" fill="#7dd3fc" font-size="13">qwen3.6-flash — triage</text>
+  <text x="84" y="650" fill="#64748b" font-size="12">No raw streams to the cloud.</text>
+
+  <!-- arrows edge->cloud -->
+  <line x1="360" y1="300" x2="470" y2="300" stroke="#7dd3fc" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="368" y="290" fill="#7dd3fc" font-size="12">event</text>
+  <line x1="470" y1="500" x2="360" y2="500" stroke="#fca5a5" stroke-width="3" marker-end="url(#arrowback)"/>
+  <text x="372" y="492" fill="#fca5a5" font-size="12">command</text>
+
+  <!-- CLOUD panel -->
+  <g filter="url(#soft)">
+    <rect x="470" y="120" width="670" height="560" rx="18" fill="url(#cloud)" stroke="#a855f7" stroke-opacity="0.4"/>
+  </g>
+  <text x="496" y="156" fill="#d8b4fe" font-size="18" font-weight="700">CLOUD — Qwen Cloud (dashscope-intl, OpenAI-compatible)</text>
+
+  <!-- Agent loop -->
+  <g filter="url(#soft)">
+    <rect x="496" y="180" width="618" height="92" rx="12" fill="#1e1233" stroke="#c084fc" stroke-opacity="0.6"/>
+  </g>
+  <text x="514" y="208" fill="#f5f3ff" font-size="16" font-weight="700">Sentinel Agent — long-horizon tool loop · qwen3.7-max</text>
+  <text x="514" y="236" fill="#cbd5e1" font-size="14">perceive → recall → reason → act → record</text>
+  <text x="514" y="258" fill="#a78bfa" font-size="12.5">runs continuously: hundreds–thousands of steps</text>
+
+  <!-- Memory box -->
+  <g filter="url(#soft)">
+    <rect x="496" y="296" width="296" height="196" rx="12" fill="#13213a" stroke="#38bdf8" stroke-opacity="0.5"/>
+  </g>
+  <text x="514" y="322" fill="#7dd3fc" font-size="15" font-weight="700">Memory — 3 tiers</text>
+  <text x="514" y="350" fill="#e2e8f0" font-size="13" font-weight="600">Working — 1M context</text>
+  <text x="514" y="368" fill="#94a3b8" font-size="11.5">full operational history, not top-k retrieval</text>
+  <text x="514" y="396" fill="#e2e8f0" font-size="13" font-weight="600">Recall — vector + SQLite</text>
+  <text x="514" y="414" fill="#94a3b8" font-size="11.5">entities, facts, versioned baselines</text>
+  <text x="514" y="442" fill="#e2e8f0" font-size="13" font-weight="600">Archival — JSONL</text>
+  <text x="514" y="460" fill="#94a3b8" font-size="11.5">immutable audit trail, forever</text>
+
+  <!-- Tools box -->
+  <g filter="url(#soft)">
+    <rect x="818" y="296" width="296" height="196" rx="12" fill="#13213a" stroke="#34d399" stroke-opacity="0.5"/>
+  </g>
+  <text x="836" y="322" fill="#6ee7b7" font-size="15" font-weight="700">Tools — function calling</text>
+  <text x="836" y="352" fill="#e2e8f0" font-size="13">• mark_normal</text>
+  <text x="836" y="378" fill="#e2e8f0" font-size="13">• alert_user</text>
+  <text x="836" y="404" fill="#e2e8f0" font-size="13">• actuate (kill process / block IP)</text>
+  <text x="836" y="430" fill="#e2e8f0" font-size="13">• query_memory</text>
+  <text x="836" y="456" fill="#e2e8f0" font-size="13">• escalate</text>
+
+  <!-- Consolidation / Dreaming -->
+  <g filter="url(#soft)">
+    <rect x="496" y="516" width="618" height="140" rx="12" fill="url(#dream)" stroke="#e9d5ff" stroke-opacity="0.5"/>
+  </g>
+  <text x="514" y="546" fill="#ffffff" font-size="16" font-weight="800">Consolidation — "Dreaming"  ·  nightly · qwen3.7-max</text>
+  <text x="514" y="574" fill="#f5f3ff" font-size="13.5">reads the day's working memory → rewrites this host's "what is normal here" baseline</text>
+  <text x="514" y="596" fill="#f5f3ff" font-size="13.5">promotes routinely-seen entities to known-normal · versions the baseline (v1, v2, …)</text>
+  <text x="514" y="624" fill="#fde68a" font-size="14" font-weight="700">★ THE NOVEL CORE — memory reorganizes itself so tomorrow's decisions are better</text>
+  <text x="514" y="646" fill="#e9d5ff" font-size="12.5">false-alarm rate falls toward zero · genuine threats still caught</text>
+
+  <!-- connectors inside cloud -->
+  <line x1="644" y1="272" x2="644" y2="296" stroke="#c084fc" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="966" y1="272" x2="966" y2="296" stroke="#c084fc" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <line x1="644" y1="492" x2="644" y2="516" stroke="#e9d5ff" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M 496 586 L 460 586 L 460 360 L 496 360" fill="none" stroke="#e9d5ff" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#arrow)"/>
+  <text x="404" y="476" fill="#e9d5ff" font-size="11">rewrites</text>
+  <text x="404" y="490" fill="#e9d5ff" font-size="11">baseline</text>
+
+  <!-- footer -->
+  <text x="60" y="724" fill="#64748b" font-size="12.5">Proof-of-deployment: src/qwen_client.py wraps the dashscope-intl endpoint  ·  Track 4 (Autopilot Agent)  ·  built solo</text>
+</svg>
