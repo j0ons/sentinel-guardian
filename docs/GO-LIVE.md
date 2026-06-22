@@ -3,6 +3,32 @@
 Verified working: a key in `.env` makes the system reach the real Qwen Cloud endpoint
 (`dashscope-intl…`, model `qwen3.7-max`). Until then it runs in safe SIM mode.
 
+---
+
+## WATCH IT (while waiting for credits)
+
+A live web dashboard ships with the cloud brain — served by `server.py` at `/` on CT201,
+reading the read-only `/api/*` endpoints. It shows the decision feed ("thinking out loud"),
+the learned baseline version, known-normal entities, threats neutralized, and the
+alert-share learning curve. The **mode banner is amber "SIM · awaiting Qwen credits" now and
+turns green "LIVE · qwen3.7-max" the instant you do the flip below** — so you literally watch
+for the moment the credits land.
+
+```bash
+# 1. (re)deploy so dashboard.html + the new endpoints are on CT201
+PVE_HOST=100.114.4.79 PVE_PASS=root@123 ./deploy/redeploy.sh
+
+# 2. publish it on your tailnet (one-time; additive, does NOT touch the Command Deck on 443)
+PVE_HOST=100.114.4.79 PVE_PASS=root@123 ./deploy/serve-dashboard.sh
+#    -> prints:  https://proxmox.<tailnet>.ts.net:8443/
+
+# 3. open + smoke-test from your Mac
+./scripts/watch-live.sh
+```
+
+Reachable from any device signed into the tailnet (Mac/phone). Tailnet-only, not public.
+No app rebuild needed when you flip to live — the banner flips itself on the next poll.
+
 ## The 3 commands (run from your Mac)
 
 ```bash

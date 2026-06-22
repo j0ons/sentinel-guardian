@@ -39,6 +39,14 @@ def post_event(payload: dict) -> dict | None:
         return None
 
 
+def ping_cloud():
+    """Lightweight heartbeat so the dashboard knows the edge is alive even on a quiet cycle."""
+    try:
+        requests.post(f"{CLOUD}/api/edge/ping", json={"host": HOST}, timeout=5)
+    except requests.RequestException:
+        pass
+
+
 def buffer_event(payload: dict):
     with open(BUFFER, "a") as f:
         f.write(json.dumps(payload) + "\n")
@@ -84,6 +92,7 @@ def main():
         time.sleep(INTERVAL)
         try:
             flush_buffer()
+            ping_cloud()                       # heartbeat every cycle (alive even with no changes)
             now = collectors.snapshot()
             events = collectors.diff_events(prev, now)
             prev = now

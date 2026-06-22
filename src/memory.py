@@ -23,7 +23,9 @@ from typing import Any
 
 from qwen_client import embed
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+# Defaults to <repo>/data; override with SENTINEL_DATA_DIR (handy for tests / relocating state).
+DATA_DIR = os.getenv("SENTINEL_DATA_DIR") or os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 DB_PATH = os.path.join(DATA_DIR, "sentinel.db")
 ARCHIVE_PATH = os.path.join(DATA_DIR, "archive.jsonl")

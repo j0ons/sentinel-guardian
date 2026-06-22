@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Sentinel — live watch</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath d='M24 3l16 6v11c0 11-6.8 18.7-16 22-9.2-3.3-16-11-16-22V9l16-6z' fill='%23071018' stroke='%231fc8dc' stroke-width='3'/%3E%3Cpath d='M24 14v9l7 4' fill='none' stroke='%2339d98a' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+  /* Self-contained. No external fonts, scripts, or styles — works on a dark tailnet, offline. */
+  :root{
+    --bg:#04080a; --bg2:#070d11; --panel:#0a1318; --panel2:#0c1820;
+    --line:#16242c; --line2:#1d3540;
+    --ink:#dfeef2; --mut:#7f97a1; --dim:#5b727c;
+    --cyan:#1fc8dc; --cyan-d:#0e94a6;
+    --green:#39d98a; --amber:#f5b945; --red:#ff5d6c; --violet:#9d8cff;
+    --mono: ui-monospace,"SF Mono","JetBrains Mono","Cascadia Code",Menlo,Consolas,monospace;
+    --sans: "Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:
+      radial-gradient(1100px 620px at 82% -10%, rgba(31,200,220,.08), transparent 60%),
+      radial-gradient(900px 520px at 5% 108%, rgba(57,217,138,.05), transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); font-size:14px; line-height:1.45;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  a{color:var(--cyan);text-decoration:none}
+  .wrap{max-width:1480px;margin:0 auto;padding:18px clamp(12px,2.4vw,30px) 40px}
+
+  /* ---- top bar ---- */
+  .top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:16px}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .logo{width:34px;height:34px;flex:0 0 auto}
+  .logo svg{display:block;width:100%;height:100%}
+  .brand h1{font-size:18px;letter-spacing:.34em;margin:0;font-weight:700;text-transform:uppercase}
+  .brand .sub{font-size:11px;color:var(--mut);letter-spacing:.16em;text-transform:uppercase;margin-top:1px}
+  .spacer{flex:1 1 auto}
+  .clock{font-family:var(--mono);font-size:12.5px;color:var(--mut);white-space:nowrap}
+
+  /* ---- mode banner (the hero — what you're watching for) ---- */
+  .mode{
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    border:1px solid var(--line2);border-radius:14px;
+    padding:13px 18px;margin-bottom:18px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,var(--panel2),var(--panel));
+  }
+  .mode::before{content:"";position:absolute;inset:0;opacity:.10;pointer-events:none;
+    background:repeating-linear-gradient(90deg,transparent 0 7px,#000 7px 8px)}
+  .mode .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+  .mode .lbl{font-family:var(--mono);font-weight:700;letter-spacing:.06em;font-size:15px}
+  .mode .desc{color:var(--mut);font-size:12.5px}
+  .mode .right{margin-left:auto;display:flex;gap:22px;flex-wrap:wrap;align-items:center}
+  .mode .kv{font-family:var(--mono);font-size:12px;color:var(--dim);white-space:nowrap}
+  .mode .kv b{color:var(--ink);font-weight:600}
+  /* SIM (awaiting credits): amber, gently pulsing */
+  .mode.sim{border-color:rgba(245,185,69,.45);box-shadow:0 0 0 1px rgba(245,185,69,.05) inset}
+  .mode.sim .dot{background:var(--amber);box-shadow:0 0 0 0 rgba(245,185,69,.55);animation:pulse 2.2s infinite}
+  .mode.sim .lbl{color:var(--amber)}
+  /* LIVE (credits landed): green, solid + brief celebratory flash */
+  .mode.live{border-color:rgba(57,217,138,.5)}
+  .mode.live .dot{background:var(--green);box-shadow:0 0 12px rgba(57,217,138,.8)}
+  .mode.live .lbl{color:var(--green)}
+  .mode.flash{animation:flash 1.2s ease-out 4}
+  /* offline: red */
+  .mode.off{border-color:rgba(255,93,108,.5)}
+  .mode.off .dot{background:var(--red)}
+  .mode.off .lbl{color:var(--red)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(245,185,69,.5)}70%{box-shadow:0 0 0 9px rgba(245,185,69,0)}100%{box-shadow:0 0 0 0 rgba(245,185,69,0)}}
+  @keyframes flash{0%{background:rgba(57,217,138,.22)}100%{background:linear-gradient(180deg,var(--panel2),var(--panel))}}
+
+  /* ---- KPI tiles ---- */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:18px}
+  .kpi{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    border-radius:12px;padding:13px 14px;min-width:0}
+  .kpi .t{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--mut)}
+  .kpi .v{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:4px;line-height:1.05}
+  .kpi .v small{font-size:13px;color:var(--dim);font-weight:400}
+  .kpi .n{font-size:11px;color:var(--dim);margin-top:3px;min-height:14px}
+  .kpi.accent .v{color:var(--cyan)}
+  .kpi.good .v{color:var(--green)}
+  .kpi.warn .v{color:var(--amber)}
+  .kpi.threat .v{color:var(--red)}
+
+  /* ---- main grid ---- */
+  .grid{display:grid;grid-template-columns:1.62fr 1fr;gap:16px;align-items:start}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);
+    border-radius:14px;overflow:hidden}
+  .phead{display:flex;align-items:center;gap:10px;padding:11px 15px;border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.012)}
+  .phead h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;margin:0;color:var(--ink);font-weight:600}
+  .phead .meta{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .rail{display:flex;flex-direction:column;gap:16px}
+
+  /* ---- live reasoning feed ---- */
+  #feed{height:min(58vh,560px);overflow:auto;padding:8px 0;font-family:var(--mono);font-size:12.5px}
+  #feed::-webkit-scrollbar{width:9px}#feed::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
+  .row{padding:5px 15px;border-left:3px solid transparent;display:block;animation:fadein .35s ease}
+  .row .ln{display:flex;gap:9px;align-items:baseline}
+  .row .ts{color:var(--dim);flex:0 0 auto}
+  .row .tag{flex:0 0 auto;font-weight:700;font-size:10.5px;letter-spacing:.06em;padding:1px 7px;border-radius:5px;border:1px solid}
+  .row .ev{color:var(--ink);min-width:0;word-break:break-word}
+  .row .why{color:var(--mut);font-size:11.5px;margin:1px 0 0 calc(9px + 0ch);padding-left:78px}
+  .row.normal{border-left-color:var(--green)}     .row.normal .tag{color:var(--green);border-color:rgba(57,217,138,.4);background:rgba(57,217,138,.08)}
+  .row.alert{border-left-color:var(--amber)}       .row.alert  .tag{color:var(--amber);border-color:rgba(245,185,69,.4);background:rgba(245,185,69,.08)}
+  .row.act{border-left-color:var(--red);background:rgba(255,93,108,.05)} .row.act .tag{color:var(--red);border-color:rgba(255,93,108,.45);background:rgba(255,93,108,.1)}
+  .row.event{border-left-color:var(--line2)}       .row.event .tag{color:var(--dim);border-color:var(--line2);background:transparent}
+  .row.dream{border-left-color:var(--violet);background:rgba(157,140,255,.07);padding:8px 15px}
+  .row.dream .tag{color:var(--violet);border-color:rgba(157,140,255,.45);background:rgba(157,140,255,.12)}
+  .row.dream .ev{color:#d8d2ff}
+  .row.flash-in{background:rgba(31,200,220,.12)}
+  @keyframes fadein{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+  .feed-empty{color:var(--dim);padding:22px 16px;font-family:var(--mono);font-size:12px}
+
+  /* ---- charts ---- */
+  .chart-wrap{padding:12px 14px 14px}
+  canvas{display:block;width:100%;height:auto}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:11px;color:var(--mut);font-family:var(--mono)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:middle}
+  .hint{font-size:11px;color:var(--dim);padding:0 14px 13px;line-height:1.4}
+
+  /* ---- known-normal + timeline lists ---- */
+  .chips{display:flex;flex-wrap:wrap;gap:6px;padding:13px 14px}
+  .chip{font-family:var(--mono);font-size:11px;color:var(--ink);background:rgba(31,200,220,.07);
+    border:1px solid rgba(31,200,220,.22);border-radius:20px;padding:3px 10px;max-width:100%;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .chip.more{background:transparent;border-color:var(--line2);color:var(--mut)}
+  .tl{padding:6px 0}
+  .tl .it{padding:9px 15px;border-bottom:1px solid var(--line)}
+  .tl .it:last-child{border-bottom:0}
+  .tl .vh{display:flex;align-items:baseline;gap:9px}
+  .tl .vh b{font-family:var(--mono);color:var(--violet);font-size:12.5px}
+  .tl .vh span{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-left:auto}
+  .tl .pv{color:var(--mut);font-size:11.5px;margin-top:3px;line-height:1.4}
+  .empty{color:var(--dim);padding:16px;font-family:var(--mono);font-size:11.5px}
+
+  .foot{margin-top:22px;color:var(--dim);font-size:11px;text-align:center;font-family:var(--mono);line-height:1.6}
+
+  @media (max-width:980px){
+    .kpis{grid-template-columns:repeat(3,1fr)}
+    .grid{grid-template-columns:1fr}
+    .mode .right{width:100%;margin-left:0}
+  }
+  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)} .row .why{padding-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none">
+          <path d="M24 3l16 6v11c0 11-6.8 18.7-16 22-9.2-3.3-16-11-16-22V9l16-6z"
+                stroke="#1fc8dc" stroke-width="2" fill="rgba(31,200,220,.06)"/>
+          <path d="M24 14v9l7 4" stroke="#39d98a" stroke-width="2.2" stroke-linecap="round"/>
+          <circle cx="24" cy="23" r="2.4" fill="#39d98a"/>
+        </svg>
+      </span>
+      <div>
+        <h1>Sentinel</h1>
+        <div class="sub">autonomous edge guardian · live watch</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div class="clock" id="clock">—</div>
+  </div>
+
+  <!-- MODE BANNER: amber SIM while awaiting credits, flips green the instant Qwen goes live -->
+  <div class="mode sim" id="mode">
+    <span class="dot"></span>
+    <span class="lbl" id="modeLbl">CONNECTING…</span>
+    <span class="desc" id="modeDesc">reaching the cloud brain</span>
+    <div class="right">
+      <span class="kv">edge <b id="edgeState">—</b></span>
+      <span class="kv">uptime <b id="uptime">—</b></span>
+      <span class="kv">next dream <b id="nextDream">03:00</b></span>
+      <span class="kv" id="cloudKv">cloud <b id="cloudState">…</b></span>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi accent"><div class="t">Baseline</div><div class="v" id="kBaseline">v0</div><div class="n" id="kBaselineN">learned model</div></div>
+    <div class="kpi good"><div class="t">Known-normal</div><div class="v" id="kNormal">0</div><div class="n">entities trusted</div></div>
+    <div class="kpi"><div class="t">Decisions</div><div class="v" id="kDecisions">0</div><div class="n" id="kEvents">0 events seen</div></div>
+    <div class="kpi threat"><div class="t">Threats stopped</div><div class="v" id="kThreats">0</div><div class="n">actuate calls</div></div>
+    <div class="kpi warn"><div class="t">Alerts raised</div><div class="v" id="kAlerts">0</div><div class="n">for human review</div></div>
+    <div class="kpi"><div class="t">Alert share</div><div class="v" id="kShare">—</div><div class="n" id="kShareN">trending</div></div>
+  </div>
+
+  <div class="grid">
+    <!-- LEFT: the reasoning feed -->
+    <div class="panel">
+      <div class="phead">
+        <h2>Reasoning · thinking out loud</h2>
+        <span class="meta" id="feedMeta">live</span>
+      </div>
+      <div id="feed"><div class="feed-empty">waiting for the edge to report…</div></div>
+    </div>
+
+    <!-- RIGHT rail -->
+    <div class="rail">
+      <div class="panel">
+        <div class="phead"><h2>Decision activity</h2><span class="meta" id="actMeta">last 2h</span></div>
+        <div class="chart-wrap"><canvas id="actChart" height="150"></canvas>
+          <div class="legend">
+            <span><i style="background:#39d98a"></i>marked normal</span>
+            <span><i style="background:#f5b945"></i>alerts</span>
+            <span><i style="background:#ff5d6c"></i>actuated</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><h2>Learning curve</h2><span class="meta">alert-share ↓ = sharper baseline</span></div>
+        <div class="chart-wrap"><canvas id="learnChart" height="140"></canvas>
+          <div class="legend"><span><i style="background:#1fc8dc"></i>alert share %</span><span><i style="background:#9d8cff"></i>baseline version</span></div>
+        </div>
+        <div class="hint">Each nightly “dream” folds repeat-but-benign activity into the baseline, so routine events stop tripping alerts. The blue line falling is Sentinel teaching itself what normal looks like here.</div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><h2>Known-normal</h2><span class="meta" id="normMeta">0</span></div>
+        <div class="chips" id="chips"><div class="empty">nothing promoted yet — first dream hasn’t run</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><h2>Dream timeline</h2><span class="meta">baseline rewrites</span></div>
+        <div class="tl" id="timeline"><div class="empty">no consolidation passes yet</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot" id="foot">Sentinel · read-only watch view · polling the cloud brain</div>
+</div>
+
+<script>
+"use strict";
+(function(){
+  // Relative URLs => works whether served at / or behind a path-prefixed proxy.
+  var API = {
+    overview:  "api/overview",
+    series:    "api/series?minutes=120&buckets=60",
+    timeline:  "api/timeline?limit=12",
+    events:    "api/events?limit=60",
+    feed:      "feed"
+  };
+  var since = 0;            // feed cursor (epoch seconds)
+  var seeded = false;       // have we backfilled history yet
+  var prevLive = null;      // detect the sim->live flip
+  var lastOk = 0;           // last successful overview
+  var feedEl = document.getElementById("feed");
+  var TAG = {mark_normal:"NORMAL", alert_user:"ALERT", actuate:"ACT!", consolidate:"DREAM"};
+  var CLS = {mark_normal:"normal", alert_user:"alert", actuate:"act", consolidate:"dream"};
+
+  // ---------- helpers ----------
+  function $(id){return document.getElementById(id);}
+  function hhmmss(s){var d=new Date(s*1000);return d.toTimeString().slice(0,8);}
+  function fmtAgo(s){ if(s==null)return "—"; s=Math.max(0,Math.round(s));
+    if(s<60)return s+"s"; if(s<3600)return Math.floor(s/60)+"m "+(s%60)+"s";
+    var h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h+"h "+m+"m"; }
+  function fmtUp(s){ s=Math.round(s||0); var d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);
+    if(d)return d+"d "+h+"h"; if(h)return h+"h "+m+"m"; return m+"m "+(s%60)+"s"; }
+  function esc(t){var e=document.createElement("div");e.textContent=t==null?"":String(t);return e.innerHTML;}
+  function atBottom(el){return el.scrollHeight-el.scrollTop-el.clientHeight < 60;}
+
+  function nearestText(item){
+    if(item.action==="consolidate"||item.event==="*** DREAMING ***"){
+      var r=item.result||{};
+      return "baseline → v"+(r.version!=null?r.version:"?")+", promoted "+(r.promoted!=null?r.promoted:0)+" to known-normal"
+        + (r.baseline_preview?("  —  "+r.baseline_preview):"");
+    }
+    return item.event||item.summary||"";
+  }
+
+  // ---------- feed ----------
+  function addRow(opts){
+    var stick = atBottom(feedEl);
+    if(!feedEl.dataset.ready){ feedEl.innerHTML=""; feedEl.dataset.ready="1"; }
+    var div=document.createElement("div");
+    div.className="row "+(opts.cls||"event")+(opts.flash?" flash-in":"");
+    var tag=opts.tag||"·";
+    var line='<div class="ln"><span class="ts">'+hhmmss(opts.ts)+'</span>'+
+             '<span class="tag">'+esc(tag)+'</span>'+
+             '<span class="ev">'+esc(opts.text)+'</span></div>';
+    if(opts.why) line+='<div class="why">'+esc(opts.why)+'</div>';
+    div.innerHTML=line;
+    feedEl.appendChild(div);
+    // cap DOM nodes
+    while(feedEl.childElementCount>400) feedEl.removeChild(feedEl.firstChild);
+    if(stick) feedEl.scrollTop=feedEl.scrollHeight;
+    if(opts.flash) setTimeout(function(){div.classList.remove("flash-in");},1400);
+  }
+
+  function renderDecision(item){
+    var act=item.action;
+    if(act==="consolidate"||item.event==="*** DREAMING ***"){
+      addRow({ts:item.ts,cls:"dream",tag:"DREAM",text:nearestText(item)});
+      return;
+    }
+    addRow({ts:item.ts,cls:CLS[act]||"event",tag:TAG[act]||(act||"·").toUpperCase(),
+            text:item.event||"", why:item.reason||""});
+  }
+
+  function pumpFeed(){
+    return fetch(API.feed+"?since="+since,{cache:"no-store"}).then(r=>r.json()).then(function(d){
+      (d.items||[]).forEach(function(it){
+        if(it.ts>since) since=it.ts;
+        renderDecision(it);
+      });
+    });
+  }
+
+  function seedHistory(){
+    // backfill recent perceived events so the feed isn't empty on first paint,
+    // then let /feed take over for live decisions.
+    return fetch(API.events,{cache:"no-store"}).then(r=>r.json()).then(function(d){
+      var items=(d.items||[]);
+      if(items.length){
+        addRow({ts:items[0].ts,cls:"event",tag:"—",text:"backfilled "+items.length+" recent events"});
+        items.slice(-24).forEach(function(e){
+          addRow({ts:e.ts,cls:"event",tag:(e.kind||"evt").toUpperCase().slice(0,6),text:e.summary||""});
+        });
+      }
+    }).catch(function(){});
+  }
+
+  // ---------- overview / header / tiles ----------
+  function setMode(state){ // 'sim' | 'live' | 'off'
+    var m=$("mode");
+    var label={sim:"SIM · awaiting Qwen credits", live:"LIVE · qwen3.7-max", off:"CLOUD OFFLINE"}[state];
+    var desc={sim:"heuristic judgment — flips to real reasoning the moment the API key lands",
+              live:"real long-horizon reasoning on Alibaba Cloud",
+              off:"can’t reach the cloud brain — retrying"}[state];
+    m.className="mode "+state;
+    $("modeLbl").textContent=label;
+    $("modeDesc").textContent=desc;
+  }
+
+  function applyOverview(o){
+    lastOk=Date.now();
+    var state=o.live?"live":"sim";
+    // celebrate the flip we’ve been waiting for
+    if(prevLive===false && o.live===true){
+      var m=$("mode"); setMode("live"); m.classList.add("flash");
+      addRow({ts:o.now,cls:"dream",tag:"★ LIVE",text:"Qwen credits landed — qwen3.7-max is now reasoning. SIM mode off.",flash:true});
+      setTimeout(function(){m.classList.remove("flash");},5200);
+    } else {
+      setMode(state);
+    }
+    prevLive=o.live;
+
+    // edge: liveness from heartbeat (online/offline); last actual event shown separately as activity
+    var es = o.edge_alive ? "online" : "offline";
+    if(o.last_event_age_s!=null) es += " · evt "+fmtAgo(o.last_event_age_s);
+    $("edgeState").textContent = es;
+    $("edgeState").style.color = o.edge_alive ? "var(--green)" : "var(--red)";
+    $("uptime").textContent = fmtUp(o.uptime_s);
+    $("cloudState").textContent="reachable"; $("cloudState").style.color="var(--green)";
+
+    $("kBaseline").textContent="v"+(o.baseline_version||0);
+    $("kBaselineN").textContent = o.last_dream_ts ? ("last dream "+hhmmss(o.last_dream_ts)) : "no dream yet";
+    $("kNormal").textContent=o.known_normal_count||0;
+    $("kDecisions").textContent=o.total_decisions||0;
+    $("kEvents").textContent=(o.total_events||0)+" events seen";
+    $("kThreats").textContent=o.threats_neutralized||0;
+    $("kAlerts").textContent=o.alerts||0;
+
+    // chips
+    var chips=$("chips"); var ks=o.known_normal||[];
+    $("normMeta").textContent=o.known_normal_count||0;
+    if(ks.length){
+      chips.innerHTML="";
+      ks.forEach(function(n){var c=document.createElement("span");c.className="chip";c.textContent=n;c.title=n;chips.appendChild(c);});
+      if((o.known_normal_count||0)>ks.length){var more=document.createElement("span");more.className="chip more";more.textContent="+"+((o.known_normal_count)-ks.length)+" more";chips.appendChild(more);}
+    }
+    nextDreamCountdown();
+  }
+
+  function nextDreamCountdown(){
+    // dream timer fires at 03:00 local on the cloud host; show a friendly countdown.
+    var now=new Date(); var t=new Date(now); t.setHours(3,0,0,0);
+    if(t<=now) t.setDate(t.getDate()+1);
+    var diff=Math.floor((t-now)/1000);
+    var h=Math.floor(diff/3600),m=Math.floor((diff%3600)/60);
+    $("nextDream").textContent="03:00 ("+h+"h "+m+"m)";
+  }
+
+  function offline(){
+    setMode("off"); prevLive=null;
+    $("cloudState").textContent="offline"; $("cloudState").style.color="var(--red)";
+    $("edgeState").textContent="—";
+  }
+
+  function pumpOverview(){
+    return fetch(API.overview,{cache:"no-store"}).then(r=>{if(!r.ok)throw 0;return r.json();})
+      .then(applyOverview)
+      .catch(function(){ if(Date.now()-lastOk>4000) offline(); });
+  }
+
+  // ---------- charts (hand-drawn canvas, no libs) ----------
+  function dpiFit(cv,h){
+    var dpr=window.devicePixelRatio||1, w=cv.clientWidth||cv.parentElement.clientWidth;
+    cv.width=Math.round(w*dpr); cv.height=Math.round(h*dpr);
+    var ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0);
+    return {ctx:ctx,w:w,h:h};
+  }
+  function gridLines(ctx,w,h,pad){
+    ctx.strokeStyle="rgba(255,255,255,.05)";ctx.lineWidth=1;
+    for(var i=0;i<=4;i++){var y=pad+ (h-2*pad)*i/4;ctx.beginPath();ctx.moveTo(pad,y+0.5);ctx.lineTo(w-pad,y+0.5);ctx.stroke();}
+  }
+
+  function drawActivity(s){
+    var cv=$("actChart"); var f=dpiFit(cv,150); var ctx=f.ctx,w=f.w,h=f.h,pad=8;
+    ctx.clearRect(0,0,w,h);
+    var n=s.buckets||(s.normal?s.normal.length:0); if(!n){return;}
+    var tot=[]; var max=1;
+    for(var i=0;i<n;i++){var v=(s.normal[i]||0)+(s.alert[i]||0)+(s.actuate[i]||0);tot.push(v);if(v>max)max=v;}
+    gridLines(ctx,w,h,pad);
+    var bw=(w-2*pad)/n, gap=Math.min(2,bw*0.18);
+    var cols=[["normal","#39d98a"],["alert","#f5b945"],["actuate","#ff5d6c"]];
+    for(var i=0;i<n;i++){
+      var x=pad+i*bw, y0=h-pad;
+      cols.forEach(function(c){
+        var val=s[c[0]][i]||0; if(!val)return;
+        var hh=(h-2*pad)*val/max;
+        ctx.fillStyle=c[1]; ctx.globalAlpha=.92;
+        ctx.fillRect(x+gap/2, y0-hh, bw-gap, hh);
+        y0-=hh;
+      });
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function drawLearning(s){
+    var cv=$("learnChart"); var f=dpiFit(cv,140); var ctx=f.ctx,w=f.w,h=f.h,pad=8;
+    ctx.clearRect(0,0,w,h);
+    var sh=s.alert_share||[]; var n=sh.length; if(!n){return;}
+    gridLines(ctx,w,h,pad);
+    // alert-share line (0..1), interpolate across null gaps
+    var pts=[]; for(var i=0;i<n;i++){ if(sh[i]!=null) pts.push([i,sh[i]]); }
+    function X(i){return pad + (w-2*pad)*(n<=1?0.5:i/(n-1));}
+    function Y(v){return pad + (h-2*pad)*(1-Math.max(0,Math.min(1,v)));}
+    if(pts.length){
+      // area
+      var g=ctx.createLinearGradient(0,pad,0,h-pad);
+      g.addColorStop(0,"rgba(31,200,220,.28)");g.addColorStop(1,"rgba(31,200,220,0)");
+      ctx.beginPath();ctx.moveTo(X(pts[0][0]),Y(pts[0][1]));
+      for(var k=1;k<pts.length;k++)ctx.lineTo(X(pts[k][0]),Y(pts[k][1]));
+      ctx.lineTo(X(pts[pts.length-1][0]),h-pad);ctx.lineTo(X(pts[0][0]),h-pad);ctx.closePath();
+      ctx.fillStyle=g;ctx.fill();
+      // line
+      ctx.beginPath();ctx.moveTo(X(pts[0][0]),Y(pts[0][1]));
+      for(var k=1;k<pts.length;k++)ctx.lineTo(X(pts[k][0]),Y(pts[k][1]));
+      ctx.strokeStyle="#1fc8dc";ctx.lineWidth=2;ctx.stroke();
+      // last dot + label
+      var last=pts[pts.length-1];
+      ctx.fillStyle="#1fc8dc";ctx.beginPath();ctx.arc(X(last[0]),Y(last[1]),3,0,7);ctx.fill();
+      ctx.fillStyle="#9fb3bb";ctx.font="11px ui-monospace,Menlo,monospace";ctx.textAlign="right";
+      ctx.fillText(Math.round(last[1]*100)+"%",w-pad,Y(last[1])-6);
+    } else {
+      ctx.fillStyle="#5b727c";ctx.font="11px ui-monospace,Menlo,monospace";ctx.textAlign="center";
+      ctx.fillText("no decisions in window yet",w/2,h/2);
+    }
+  }
+
+  function pumpSeries(){
+    return fetch(API.series,{cache:"no-store"}).then(r=>r.json()).then(function(s){
+      var mins=Math.round((s.bucket_s*s.buckets)/60);
+      $("actMeta").textContent="last "+(mins>=60?(Math.round(mins/60)+"h"):(mins+"m"));
+      drawActivity(s); drawLearning(s);
+      // alert-share tile = mean of last few buckets
+      var sh=(s.alert_share||[]).filter(function(x){return x!=null;});
+      if(sh.length){ var tail=sh.slice(-6); var avg=tail.reduce((a,b)=>a+b,0)/tail.length;
+        $("kShare").textContent=Math.round(avg*100)+"%";
+        var first=sh.slice(0,6); var f0=first.reduce((a,b)=>a+b,0)/first.length;
+        $("kShareN").textContent = avg<=f0 ? "trending down" : "watching";
+      } else { $("kShare").textContent="—"; $("kShareN").textContent="no data"; }
+    }).catch(function(){});
+  }
+
+  // ---------- timeline ----------
+  function pumpTimeline(){
+    return fetch(API.timeline,{cache:"no-store"}).then(r=>r.json()).then(function(d){
+      var el=$("timeline"); var items=d.items||[];
+      if(!items.length){el.innerHTML='<div class="empty">no consolidation passes yet</div>';return;}
+      el.innerHTML="";
+      items.forEach(function(it){
+        var div=document.createElement("div");div.className="it";
+        div.innerHTML='<div class="vh"><b>baseline v'+it.version+'</b><span>'+hhmmss(it.ts)+'</span></div>'+
+                      '<div class="pv">'+esc(it.preview||"")+'</div>';
+        el.appendChild(div);
+      });
+    }).catch(function(){});
+  }
+
+  // ---------- clock + loops ----------
+  function tick(){ $("clock").textContent=new Date().toString().replace(/ GMT.*$/,""); }
+
+  function boot(){
+    tick(); setInterval(tick,1000);
+    seedHistory().then(function(){ seeded=true; return pumpFeed(); });
+    pumpOverview(); pumpSeries(); pumpTimeline();
+    setInterval(pumpFeed, 1500);
+    setInterval(pumpOverview, 3000);
+    setInterval(pumpSeries, 12000);
+    setInterval(pumpTimeline, 30000);
+    window.addEventListener("resize", function(){ pumpSeries(); });
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
