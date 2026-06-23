@@ -17,8 +17,10 @@ CLOUD_ID=201
 EDGE_ID=202
 
 echo "==> building code tarball"
+# Exclude .env: the API key is managed separately on CT201 (never bundle a secret into the
+# deploy tarball, and the edge CT never needs it). data/ excluded to preserve live history.
 tar --exclude='.venv' --exclude='.venv-edge' --exclude='.git' --exclude='data' \
-    --exclude='__pycache__' --exclude='*.pyc' -czf /tmp/sentinel-code.tgz .
+    --exclude='.env' --exclude='__pycache__' --exclude='*.pyc' -czf /tmp/sentinel-code.tgz .
 
 echo "==> copying to PVE host"
 SSHPASS="$PVE_PASS" sshpass -e scp -o StrictHostKeyChecking=accept-new \

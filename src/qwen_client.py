@@ -21,11 +21,16 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Transient-failure retry policy for live API calls (see chat()).
+MAX_RETRIES = int(os.getenv("QWEN_MAX_RETRIES", "3"))
+RETRY_BACKOFF = float(os.getenv("QWEN_RETRY_BACKOFF", "1.0"))   # seconds, doubled each attempt
 
 # --- Qwen Cloud (Alibaba Cloud) OpenAI-compatible endpoint -------------------
 BASE_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1"
@@ -79,17 +84,31 @@ def chat(
     if tools:
         kwargs["tools"] = tools
 
-    resp = _client.chat.completions.create(**kwargs)
-    msg = resp.choices[0].message
-    tool_calls = []
-    for tc in (msg.tool_calls or []):
+    # Retry transient failures (network blips, 429/5xx). Without this, a single hiccup at
+    # dream time would silently fall back to the deterministic stub baseline and the
+    # self-improvement loop would quietly stop using Qwen. Bounded, with backoff.
+    last_err: Exception | None = None
+    for attempt in range(MAX_RETRIES):
         try:
-            args = json.loads(tc.function.arguments or "{}")
-        except json.JSONDecodeError:
-            args = {"_raw": tc.function.arguments}
-        tool_calls.append({"id": tc.id, "name": tc.function.name, "arguments": args})
+            resp = _client.chat.completions.create(**kwargs)
+            msg = resp.choices[0].message
+            tool_calls = []
+            for tc in (msg.tool_calls or []):
+                try:
+                    args = json.loads(tc.function.arguments or "{}")
+                except json.JSONDecodeError:
+                    args = {"_raw": tc.function.arguments}
+                tool_calls.append({"id": tc.id, "name": tc.function.name, "arguments": args})
+            return {"text": msg.content or "", "tool_calls": tool_calls, "raw": resp}
+        except Exception as e:                      # noqa: BLE001 — any SDK/transport error
+            last_err = e
+            if attempt < MAX_RETRIES - 1:
+                time.sleep(RETRY_BACKOFF * (2 ** attempt))
 
-    return {"text": msg.content or "", "tool_calls": tool_calls, "raw": resp}
+    # Exhausted retries: surface a clear, logged failure rather than silently degrading.
+    print(f"[qwen_client] chat() failed after {MAX_RETRIES} attempts: "
+          f"{type(last_err).__name__}: {last_err}", flush=True)
+    return {"text": "", "tool_calls": [], "raw": None, "error": str(last_err)}
 
 
 def embed(texts: list[str], *, model: str | None = None) -> list[list[float]]:

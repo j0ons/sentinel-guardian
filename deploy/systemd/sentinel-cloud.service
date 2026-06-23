@@ -6,9 +6,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=/root/sentinel/src
-# SIM mode until Qwen credits land. To go live: add QWEN_API_KEY to /root/sentinel/.env,
-# set SENTINEL_SIM=0 below, then: systemctl daemon-reload && systemctl restart sentinel-cloud
-Environment=SENTINEL_SIM=1
+# LIVE: SENTINEL_SIM=0 uses real qwen3.7-max and requires QWEN_API_KEY in /root/sentinel/.env.
+# Set to 1 for safe offline SIM mode (deterministic, no API key needed).
+Environment=SENTINEL_SIM=0
 ExecStart=/root/sentinel/.venv/bin/python -m uvicorn server:app --host 0.0.0.0 --port 8000
 Restart=always
 RestartSec=3
