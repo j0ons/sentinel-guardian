@@ -76,8 +76,9 @@ real threat — missing a threat is far worse than a false alarm."""
 #     the FULL history in 1M context — that's where the big-context claim genuinely pays off.
 _CHARS_PER_TOKEN = 4
 DECISION_TOKEN_BUDGET = int(os.getenv("SENTINEL_DECISION_TOKENS", "8000"))     # fast per-event
-CONTEXT_TOKEN_BUDGET = int(os.getenv("SENTINEL_CONTEXT_TOKENS", "200000"))     # full, for dreaming
 MAX_HISTORY_EVENTS = int(os.getenv("SENTINEL_MAX_HISTORY_EVENTS", "5000"))     # hard upper bound
+# (The large full-history budget lives in consolidate.py, where the nightly dream actually
+#  uses it — per-event decisions stay small for latency. See consolidate.CONTEXT_TOKEN_BUDGET.)
 
 
 class SentinelAgent:
@@ -89,7 +90,7 @@ class SentinelAgent:
     def _working_memory_block(self, max_events: int = MAX_HISTORY_EVENTS,
                               token_budget: int = DECISION_TOKEN_BUDGET) -> str:
         """Assemble the host's living memory. `token_budget` caps how much history is included:
-        small for fast per-event decisions, large (CONTEXT_TOKEN_BUDGET) for nightly dreaming.
+        small for fast per-event decisions; the nightly dream uses a much larger budget.
 
         Records how much it used in `last_context_stats` so the demo can show context usage."""
         baseline = self.memory.current_baseline(self.host)

@@ -10,10 +10,17 @@ is what needs the 1M context and is the thing other entries won't have.
 
 from __future__ import annotations
 
+import os
 import time
 
 from memory import Memory
 from qwen_client import chat, is_live
+
+# The nightly dream reasons over the full operational history in large context (latency is
+# irrelevant once a day). This is where Qwen's big context is genuinely exploited — kept well
+# within the 1M window. Per-event decisions deliberately use a much smaller window for speed.
+CONTEXT_TOKEN_BUDGET = int(os.getenv("SENTINEL_CONTEXT_TOKENS", "200000"))
+MAX_CONSOLIDATION_EVENTS = int(os.getenv("SENTINEL_MAX_HISTORY_EVENTS", "5000"))
 
 CONSOLIDATION_PROMPT = """You are Sentinel's nightly consolidation process ("dreaming").
 You are given: the previous baseline, the full list of entities seen on this host (with how
@@ -62,6 +69,22 @@ def consolidate(memory: Memory, host: str = "edge-0",
     ent_lines = [f"  {r['name']} (x{r['seen_count']}, normal={r['normal']})" for r in entities]
     dec_lines = [f"  {r['action']}: {r['reason']}" for r in decisions]
 
+    # THE 1M-CONTEXT PAYOFF: unlike per-event decisions (which use a small recent window for
+    # latency), the nightly dream is latency-insensitive, so it reasons over the deployment's
+    # FULL operational event history — up to CONTEXT_TOKEN_BUDGET tokens. This is where the
+    # large context is genuinely exploited: the model rewrites "normal" against weeks of raw
+    # timeline, not just aggregate counts. Budgeted so it stays well within the 1M window.
+    char_budget = CONTEXT_TOKEN_BUDGET * 4          # ~4 chars/token
+    full_events = memory.recent_events(limit=MAX_CONSOLIDATION_EVENTS)
+    ev_lines, used = [], 0
+    for e in reversed(full_events):                 # newest first, trim oldest if over budget
+        ln = f"  {e.to_text()}"
+        if used + len(ln) > char_budget:
+            break
+        ev_lines.append(ln); used += len(ln)
+    ev_lines.reverse()
+    consolidation_context_tokens = used // 4
+
     # Strip any prior "(auto)" stub framing so the model never sees the placeholder format to
     # copy — early SIM-mode baselines were stubs and the model was parroting them back.
     prev_for_prompt = prev_baseline
@@ -71,7 +94,9 @@ def consolidate(memory: Memory, host: str = "edge-0",
     user = (
         f"PREVIOUS BASELINE (v{prev_version}):\n{prev_for_prompt}\n\n"
         f"ENTITIES SEEN ON THIS HOST:\n" + "\n".join(ent_lines) + "\n\n"
-        f"TODAY'S DECISIONS:\n" + "\n".join(dec_lines) + "\n\n"
+        f"FULL OPERATIONAL HISTORY ({len(ev_lines)} events, ~{consolidation_context_tokens} "
+        f"tokens of context):\n" + "\n".join(ev_lines) + "\n\n"
+        f"RECENT DECISIONS:\n" + "\n".join(dec_lines) + "\n\n"
         "Rewrite the baseline."
     )
 
@@ -112,6 +137,8 @@ def consolidate(memory: Memory, host: str = "edge-0",
         "baseline_preview": new_baseline[:160],
         "live": is_live(),
         "ts": time.time(),
+        "context_events": len(ev_lines),               # full history actually fed to the dream
+        "context_tokens": consolidation_context_tokens,
     }
 
 

@@ -43,8 +43,11 @@ correct verdicts depending on what the agent has learned. Captured live from `qw
 The model *inferred from accumulated memory* that `:9000` is the backup's backend. That is a
 judgment a stateless model structurally cannot make — and it's why this needs Qwen specifically:
 
-- **1M-token native context** holds the running operational log of the deployment as *working
-  memory*. The agent reasons over the whole history at decision time, not a top-k retrieval.
+- **Large native context for the nightly "dream"** — the consolidation pass reasons over the
+  deployment's *full operational history* (thousands of events) in one context to rewrite the
+  host's behavioural baseline; this is where Qwen's large context window is genuinely exploited
+  (latency is irrelevant once a day). Per-event decisions use a focused recent window for speed,
+  grounded against that model-written baseline — not a top-k vector retrieval.
 - **Long-horizon agency** — Sentinel runs a continuous perceive → recall → reason → act →
   record loop across hundreds–thousands of steps, the regime qwen3.7-max is trained for.
 - **Nightly consolidation ("dreaming")** — a qwen3.7-max pass reads the day's working memory
