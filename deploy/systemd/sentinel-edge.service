@@ -2,6 +2,8 @@
 Description=Sentinel edge agent (treated as the Pi)
 After=network-online.target
 Wants=network-online.target
+# Never stop retrying — a guardian must keep coming back up (correct section is [Unit]).
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -11,7 +13,6 @@ Environment=SENTINEL_INTERVAL=5
 ExecStart=/root/sentinel/.venv/bin/python runner.py
 Restart=always
 RestartSec=3
-StartLimitIntervalSec=0
 
 [Install]
 WantedBy=multi-user.target
