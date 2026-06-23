@@ -124,6 +124,51 @@ def feed(since: float = 0.0):
     return {"now": time.time(), "items": [r for r in FEED if r["ts"] > since]}
 
 
+# --- Operator agency: posture (arm/disarm), entity drilldown, decision verdict ---------------
+import tools as _tools
+
+
+@app.get("/api/posture")
+def get_posture():
+    """Current defensive posture: SAFE (dry-run) vs ARMED (real kill/block on the edge)."""
+    return {"armed": bool(_tools.ARMED)}
+
+
+class PostureIn(BaseModel):
+    armed: bool
+
+
+@app.post("/api/posture")
+def set_posture(p: PostureIn, _auth: None = Depends(require_token)):
+    """Flip SAFE<->ARMED at runtime (the on-camera agency beat). Bearer-gated."""
+    _tools.ARMED = bool(p.armed)
+    FEED.append({"ts": time.time(), "event": "*** POSTURE ***", "action": "posture",
+                 "reason": ("ARMED — actuation is now live" if _tools.ARMED
+                            else "SAFE — actuation is dry-run"),
+                 "result": {"armed": _tools.ARMED}})
+    return {"armed": _tools.ARMED}
+
+
+@app.get("/api/entity")
+def api_entity(name: str):
+    """Full history/trust of one entity — backs the evidence-drawer drilldown."""
+    return MEMORY.entity_history(name)
+
+
+class VerdictIn(BaseModel):
+    verdict: str           # "false_alarm" | "confirm" | "ack"
+
+
+@app.post("/api/decision/{decision_id}/verdict")
+def decision_verdict(decision_id: int, v: VerdictIn, _auth: None = Depends(require_token)):
+    """Human-in-the-loop: mark a decision a false alarm (teaches the baseline) / confirm / ack."""
+    fa = 1 if v.verdict == "false_alarm" else (0 if v.verdict == "confirm" else None)
+    with LOCK:
+        MEMORY.db.execute("UPDATE decisions SET was_false_alarm=? WHERE id=?", (fa, decision_id))
+        MEMORY.db.commit()
+    return {"ok": True, "decision_id": decision_id, "verdict": v.verdict}
+
+
 @app.get("/stats")
 def stats():
     """Aggregate counts for quick status."""
@@ -190,7 +235,22 @@ def api_overview():
         "last_dream_ts": last_dream_ts,
         # 1M-context working memory: how much history the agent reasoned over last decision.
         "context": AGENT.last_context_stats,
+        "armed": bool(_tools.ARMED),                    # defensive posture (SAFE vs ARMED)
+        "today": _today_counts(),                        # scoped to since-midnight, for the scoreboard
     }
+
+
+def _today_counts():
+    """Decision counts since local midnight — powers the 'stopped today' scoreboard."""
+    import datetime
+    midnight = time.mktime(datetime.date.today().timetuple())
+    rows = MEMORY.db.execute(
+        "SELECT action, COUNT(*) c FROM decisions WHERE ts >= ? GROUP BY action", (midnight,)
+    ).fetchall()
+    by = {r["action"]: r["c"] for r in rows}
+    return {"threats": by.get("actuate", 0), "alerts": by.get("alert_user", 0),
+            "normal": by.get("mark_normal", 0),
+            "events": sum(by.values())}
 
 
 @app.post("/api/edge/ping")
