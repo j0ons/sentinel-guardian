@@ -79,6 +79,37 @@ TOOL_SCHEMAS = [
             },
         },
     },
+    {
+        "type": "function",
+        "function": {
+            "name": "check_entity",
+            "description": "Look up the full history of a specific entity (process/connection/login) — "
+                           "how many times it's been seen, when first/last, and whether it's trusted. "
+                           "Use while investigating to ground a verdict in this host's actual history.",
+            "parameters": {
+                "type": "object",
+                "properties": {"entity": {"type": "string",
+                               "description": "canonical key, e.g. 'proc:nginx' or 'outbound:4444:1.2.3.4'"}},
+                "required": ["entity"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "correlate_recent",
+            "description": "List the host's activity in the last N seconds, to see if THIS event is "
+                           "part of a larger pattern — an attack rarely happens alone (e.g. a new "
+                           "process, then a new listener, then an external connection = a kill-chain). "
+                           "Use to detect novel multi-step threats, not just known-bad signatures.",
+            "parameters": {
+                "type": "object",
+                "properties": {"seconds": {"type": "integer",
+                               "description": "look-back window in seconds (e.g. 120)"}},
+                "required": ["seconds"],
+            },
+        },
+    },
 ]
 
 
@@ -106,6 +137,19 @@ def execute(name: str, args: dict, *, memory=None) -> dict:
         hits = memory.search_recall(args.get("query", ""), k=5)
         return {"ok": True, "results": [{"score": round(s, 3), "event": e.to_text()}
                                         for s, e in hits]}
+
+    if name == "check_entity":
+        if memory is None:
+            return {"ok": False, "error": "no memory bound"}
+        return {"ok": True, **memory.entity_history(args.get("entity", ""))}
+
+    if name == "correlate_recent":
+        if memory is None:
+            return {"ok": False, "error": "no memory bound"}
+        secs = float(args.get("seconds", 120))
+        evs = memory.events_in_window(secs, limit=40)
+        return {"ok": True, "window_s": secs, "count": len(evs),
+                "events": [e.to_text() for e in evs]}
 
     return {"ok": False, "error": f"unknown tool {name}"}
 

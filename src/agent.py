@@ -24,6 +24,12 @@ from tools import TOOL_SCHEMAS, execute
 # Threat-signature markers that must never be cleared by the cheap triage gate (safety floor).
 THREAT_MARKERS = (":4444:", ":1337:", ":31337:", ":5555:", ":6667:")
 
+# Terminal actions end the investigation; everything else is an investigative tool.
+TERMINAL_ACTIONS = ("mark_normal", "alert_user", "actuate")
+# How many investigative tool calls the agent may make before it must decide (long-horizon
+# autonomy, bounded so a single event can't run away in cost/latency).
+MAX_INVESTIGATION_STEPS = int(os.getenv("SENTINEL_MAX_INVESTIGATION_STEPS", "4"))
+
 SYSTEM_PROMPT = """You are Sentinel, an autonomous security guardian running on a single host.
 Your job: for each observed event, decide if it is NORMAL for this host or an ANOMALY.
 
@@ -32,6 +38,21 @@ calibrated: most events on a working machine are routine — do not cry wolf. Re
 for genuinely unusual activity, and reserve `actuate` for high-confidence malicious behavior
 that contradicts the baseline (e.g. an unknown process opening an unexpected listening port
 or connecting to a suspicious endpoint).
+
+You are an AGENT, not a one-shot classifier. When an event is ambiguous or suspicious,
+INVESTIGATE before deciding — you have tools:
+  - check_entity(entity): has this been seen before on this host, how often, is it trusted?
+  - correlate_recent(seconds): what else happened around this event? Attacks rarely happen
+    alone — look for a CHAIN (e.g. a new/unknown process, THEN a new listening port, THEN an
+    outbound connection to an external host = a likely intrusion kill-chain, even if no single
+    step is a known-bad signature). Reason about NOVEL attack patterns, not just known ports.
+  - query_memory(query): semantic search of past events.
+Gather evidence across a few steps, then take ONE terminal action. RULE: for any unknown or
+external connection, an unknown new process, or a new listening port, you MUST call
+correlate_recent FIRST to check for a surrounding attack chain before deciding — do not
+mark_normal or alert on these without correlating. If correlate_recent reveals a chain
+(unknown process + new listener + external egress in the same window), that is an intrusion —
+actuate.
 
 NON-NEGOTIABLE SAFETY FLOOR — a permissive baseline NEVER overrides these. Even if the host
 looks quiet and most activity is normal, ALWAYS treat the following as a threat and `actuate`
@@ -43,9 +64,10 @@ looks quiet and most activity is normal, ALWAYS treat the following as a threat 
 A baseline describes routine BENIGN activity; it is not a license to ignore attack
 signatures. When the signature above is present, the threat verdict wins — full stop.
 
-Always choose exactly ONE tool. Prefer `mark_normal` when the event fits the learned
-baseline AND shows no attack signature. Your goal over time is to drive false alarms toward
-zero while NEVER missing a real threat — missing a threat is far worse than a false alarm."""
+Terminal actions: mark_normal (fits the learned baseline, no anomaly, investigation clean),
+alert_user (unusual, worth a human), actuate (high-confidence malicious — known signature OR
+a correlated attack chain you uncovered). Drive false alarms toward zero while NEVER missing a
+real threat — missing a threat is far worse than a false alarm."""
 
 
 # qwen3.7-max has a 1M-token context window. Sentinel uses it as living working memory, but
@@ -151,7 +173,7 @@ class SentinelAgent:
             self.memory.record_decision(event_id, "mark_normal", result.get("reason", ""), ev.ts)
             return {"event": ev.to_text(), "action": "mark_normal",
                     "reason": result.get("reason", ""), "result": result,
-                    "live": is_live(), "triage": "flash"}
+                    "live": is_live(), "triage": "flash", "investigation": [], "steps": 0}
 
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
@@ -161,38 +183,54 @@ class SentinelAgent:
                 + ev.to_text()
                 + f"\ndetail: {ev.detail}"
                 + (f"\nentity: {entity[0]}" if entity else "")
-                + "\n\nDecide. Call exactly one tool."
+                + "\n\nInvestigate if needed (check_entity / correlate_recent / query_memory), "
+                "then take exactly one terminal action (mark_normal / alert_user / actuate)."
             )},
         ]
 
-        resp = chat(messages, tools=TOOL_SCHEMAS)
-        tool_calls = resp.get("tool_calls") or []
-
-        if not tool_calls:
-            # model answered in text instead of calling a tool — default to a soft alert
-            action, args = "alert_user", {"severity": "low", "reason": resp.get("text", "")[:200]}
-        else:
-            tc = tool_calls[0]
-            action, args = tc["name"], tc["arguments"]
-
-        # one-hop tool chaining: if it asked to look something up, do it and let it re-decide
-        if action == "query_memory":
-            lookup = execute("query_memory", args, memory=self.memory)
-            messages.append({"role": "assistant", "content": f"(queried memory: {lookup})"})
-            messages.append({"role": "user", "content": "Now decide with a final action tool."})
+        # Multi-step investigation loop: the agent may call investigative tools repeatedly to
+        # gather evidence before committing to a terminal action. This is the autonomy that the
+        # long-horizon + 1M-context claim is FOR — it correlates across events to catch novel
+        # multi-step attacks, not just one isolated signature. The trace is captured for the demo.
+        investigation: list[dict] = []
+        action, args = "alert_user", {"severity": "low", "reason": "inconclusive"}
+        for step in range(MAX_INVESTIGATION_STEPS):
             resp = chat(messages, tools=TOOL_SCHEMAS)
-            tcs = resp.get("tool_calls") or []
+            tool_calls = resp.get("tool_calls") or []
+            if not tool_calls:
+                # answered in prose instead of a tool — treat as a soft alert and stop
+                action, args = "alert_user", {"severity": "low",
+                                              "reason": (resp.get("text") or "")[:200] or "no tool called"}
+                break
+            tc = tool_calls[0]
+            name, a = tc["name"], tc["arguments"]
+            if name in TERMINAL_ACTIONS:
+                action, args = name, a
+                break
+            # investigative tool → run it, feed the result back, let the agent keep reasoning
+            obs = execute(name, a, memory=self.memory)
+            investigation.append({"step": step + 1, "tool": name, "args": a, "observation": obs})
+            messages.append({"role": "assistant",
+                             "content": f"[investigate] {name}({a}) -> {obs}"})
+            messages.append({"role": "user",
+                             "content": "Continue investigating, or take a terminal action now."})
+        else:
+            # ran out of steps without a terminal action — force a final decision
+            messages.append({"role": "user", "content": "Investigation budget reached. Decide NOW: "
+                             "call mark_normal, alert_user, or actuate."})
+            resp = chat(messages, tools=TOOL_SCHEMAS)
+            tcs = [t for t in (resp.get("tool_calls") or []) if t["name"] in TERMINAL_ACTIONS]
             if tcs:
                 action, args = tcs[0]["name"], tcs[0]["arguments"]
-            else:
-                action, args = "alert_user", {"severity": "low", "reason": "inconclusive after lookup"}
 
         result = execute(action, args, memory=self.memory)
         reason = args.get("reason", "")
         self.memory.record_decision(event_id, action, reason, ev.ts)
 
         return {"event": ev.to_text(), "action": action, "reason": reason,
-                "result": result, "live": is_live()}
+                "result": result, "live": is_live(),
+                "investigation": investigation,                 # the agent's investigative trace
+                "steps": len(investigation)}
 
 
 if __name__ == "__main__":

@@ -138,6 +138,28 @@ class Memory:
         """Total events on record — used to report how much history fits in the context."""
         return self.db.execute("SELECT COUNT(*) c FROM events").fetchone()["c"]
 
+    def events_in_window(self, seconds: float, limit: int = 40) -> list[Event]:
+        """Events within the last `seconds` — for correlating a kill-chain (an attack shows up
+        as a burst of related activity, not one isolated event)."""
+        cutoff = time.time() - seconds
+        rows = self.db.execute(
+            "SELECT * FROM events WHERE ts >= ? ORDER BY id DESC LIMIT ?", (cutoff, limit)
+        ).fetchall()
+        return [self._row_to_event(r) for r in reversed(rows)]
+
+    def entity_history(self, name: str) -> dict:
+        """Everything known about one entity: how often seen, first/last, normal-flag — the
+        'have we seen this, and is it trusted?' lookup the agent uses while investigating."""
+        row = self.db.execute(
+            "SELECT name, kind, seen_count, normal, first_seen, last_seen FROM entities WHERE name=?",
+            (name,),
+        ).fetchone()
+        if not row:
+            return {"name": name, "known": False}
+        return {"name": row["name"], "kind": row["kind"], "seen_count": row["seen_count"],
+                "normal": bool(row["normal"]), "first_seen": row["first_seen"],
+                "last_seen": row["last_seen"], "known": True}
+
     def current_baseline(self, host: str = "edge-0") -> str:
         row = self.db.execute(
             "SELECT model FROM baselines WHERE host=? ORDER BY version DESC LIMIT 1", (host,)
