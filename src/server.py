@@ -16,7 +16,7 @@ import threading
 import time
 from collections import deque
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
@@ -26,6 +26,27 @@ from memory import Event, Memory
 from qwen_client import is_live
 
 app = FastAPI(title="Sentinel", version="1.0")
+
+# --- Auth: mutating routes (/event, /consolidate, /api/edge/ping) require a bearer token.
+# The detector is otherwise an unauthenticated remote-control surface — anyone who can reach
+# it could forge events to poison the baseline, mark a C2 'normal', or trigger actuate.
+# Set SENTINEL_TOKEN on the server AND the edge. If unset, auth is disabled (dev/SIM only) and
+# a warning is logged so it can't ship open silently.
+SENTINEL_TOKEN = os.getenv("SENTINEL_TOKEN", "").strip()
+if not SENTINEL_TOKEN:
+    print("[server] WARNING: SENTINEL_TOKEN unset — mutating endpoints are UNAUTHENTICATED. "
+          "Set SENTINEL_TOKEN (server + edge) before any non-loopback / public deployment.",
+          flush=True)
+
+
+def require_token(authorization: str = Header(default="")):
+    """Bearer-token gate for mutating routes. No-op if SENTINEL_TOKEN is unset (dev)."""
+    if not SENTINEL_TOKEN:
+        return
+    expected = f"Bearer {SENTINEL_TOKEN}"
+    # constant-time-ish compare
+    if len(authorization) != len(expected) or authorization != expected:
+        raise HTTPException(status_code=401, detail="invalid or missing bearer token")
 
 # Single shared brain for the deployment.
 MEMORY = Memory()                      # persists to data/sentinel.db
@@ -65,7 +86,7 @@ async def health():
 
 
 @app.post("/event")
-def ingest(ev: EventIn):
+def ingest(ev: EventIn, _auth: None = Depends(require_token)):
     """Receive one edge event, reason about it, return the action to take.
 
     Never 500s on a single bad event: any failure degrades to a safe 'alert_user' so the
@@ -88,7 +109,7 @@ def ingest(ev: EventIn):
 
 
 @app.post("/consolidate")
-def dream(host: str = "edge-0"):
+def dream(host: str = "edge-0", _auth: None = Depends(require_token)):
     """Trigger a nightly consolidation pass ('dreaming')."""
     with LOCK:
         result = consolidate(MEMORY, host=host)
@@ -173,7 +194,7 @@ def api_overview():
 
 
 @app.post("/api/edge/ping")
-def edge_ping(p: PingIn):
+def edge_ping(p: PingIn, _auth: None = Depends(require_token)):
     """Edge heartbeat. The runner calls this every cycle so 'edge online' is true even when
     nothing changed (events are change-driven and can be minutes apart on a quiet host)."""
     EDGE["last_contact"] = time.time()

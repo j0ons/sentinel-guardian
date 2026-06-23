@@ -32,11 +32,14 @@ INTERVAL = float(os.getenv("SENTINEL_INTERVAL", "5"))
 POST_TIMEOUT = float(os.getenv("SENTINEL_POST_TIMEOUT", "60"))
 HOST = socket.gethostname()
 BUFFER = os.path.join(os.path.dirname(__file__), "outbox.jsonl")
+# Bearer token for the cloud's authenticated endpoints (must match server SENTINEL_TOKEN).
+_TOKEN = os.getenv("SENTINEL_TOKEN", "").strip()
+_AUTH = {"Authorization": f"Bearer {_TOKEN}"} if _TOKEN else {}
 
 
 def post_event(payload: dict) -> dict | None:
     try:
-        r = requests.post(f"{CLOUD}/event", json=payload, timeout=POST_TIMEOUT)
+        r = requests.post(f"{CLOUD}/event", json=payload, headers=_AUTH, timeout=POST_TIMEOUT)
         r.raise_for_status()
         return r.json()
     except requests.RequestException:
@@ -46,7 +49,7 @@ def post_event(payload: dict) -> dict | None:
 def ping_cloud():
     """Lightweight heartbeat so the dashboard knows the edge is alive even on a quiet cycle."""
     try:
-        requests.post(f"{CLOUD}/api/edge/ping", json={"host": HOST}, timeout=5)
+        requests.post(f"{CLOUD}/api/edge/ping", json={"host": HOST}, headers=_AUTH, timeout=5)
     except requests.RequestException:
         pass
 
@@ -57,21 +60,40 @@ def buffer_event(payload: dict):
 
 
 def flush_buffer():
-    """Replay any events buffered while the cloud was down."""
+    """Replay any events buffered while the cloud was down.
+
+    Each line is parsed independently: a single torn write (a Pi losing power mid-append —
+    exactly the scenario the buffer exists for) must not brick the whole runner. Undecodable
+    lines are dropped + logged, never allowed to raise and kill the main loop forever."""
     if not os.path.exists(BUFFER):
         return
-    pending = [json.loads(l) for l in open(BUFFER) if l.strip()]
+    pending, corrupt = [], 0
+    with open(BUFFER) as f:
+        for line in f:
+            if not line.strip():
+                continue
+            try:
+                pending.append(json.loads(line))
+            except json.JSONDecodeError:
+                corrupt += 1                  # drop the poison-pill line, keep going
+    if corrupt:
+        print(f"[edge] dropped {corrupt} corrupt buffer line(s)", flush=True)
     if not pending:
+        if corrupt:                           # clear the file of the dropped junk
+            open(BUFFER, "w").close()
         return
     survived = []
     for p in pending:
-        if post_event(p) is None:
-            survived.append(p)            # still down — keep it
+        decision = post_event(p)
+        if decision is None:
+            survived.append(p)                # still down — keep it
+        else:
+            apply_action(decision)            # a buffered threat must still fire locally
     with open(BUFFER, "w") as f:
         for p in survived:
             f.write(json.dumps(p) + "\n")
     if not survived:
-        print(f"[edge] flushed {len(pending)} buffered events")
+        print(f"[edge] flushed {len(pending)} buffered events", flush=True)
 
 
 def apply_action(decision: dict):

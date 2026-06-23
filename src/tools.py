@@ -158,13 +158,29 @@ def _actuate_real(action: str, target: str, reason: str) -> dict:
     """Real defensive actions — only reached when SENTINEL_ARMED=1."""
     import signal
     if action == "kill_process":
+        # Validate the PID hard: int('-1')==-1 → os.kill(-1, ...) signals EVERY process;
+        # int('0')==0 → the whole process group. A hallucinated/injected target:"-1" would
+        # take down the host. Refuse anything <= 1 (and PID 1 = init).
         try:
-            os.kill(int(target), signal.SIGTERM)
-            return {"ok": True, "action": "kill_process", "target": target, "armed": True}
-        except (ProcessLookupError, ValueError, PermissionError) as e:
+            pid = int(target)
+        except (TypeError, ValueError):
+            return {"ok": False, "error": f"invalid pid {target!r}"}
+        if pid <= 1:
+            return {"ok": False, "error": f"refusing to kill pid {pid} (<=1: would hit a "
+                    "process group / init / every process)"}
+        try:
+            os.kill(pid, signal.SIGTERM)
+            return {"ok": True, "action": "kill_process", "target": pid, "armed": True}
+        except (ProcessLookupError, PermissionError) as e:
             return {"ok": False, "error": str(e)}
     if action == "block_ip":
-        # On the Pi (Linux) this would shell out to nftables/iptables. Recorded as intent here.
-        return {"ok": True, "action": "block_ip", "target": target, "armed": True,
+        # Validate as a real IP before any future nftables/iptables shell-out (never interpolate
+        # an unvalidated string into a command). Currently records intent only.
+        import ipaddress
+        try:
+            ip = str(ipaddress.ip_address(target))
+        except ValueError:
+            return {"ok": False, "error": f"invalid ip {target!r}"}
+        return {"ok": True, "action": "block_ip", "target": ip, "armed": True,
                 "note": "would add nftables drop rule on Linux edge"}
     return {"ok": False, "error": f"unknown actuate action {action}"}
