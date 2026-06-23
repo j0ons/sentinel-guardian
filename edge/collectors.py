@@ -66,10 +66,12 @@ def snapshot() -> Snapshot:
     conns, listens = set(), set()
     try:
         for c in psutil.net_connections(kind="inet"):
+            # Pack with '|' (never appears in an IP/port) so IPv6 addresses — which contain
+            # colons — round-trip cleanly. A ':' delimiter broke parsing on hosts with IPv6.
             if c.status == psutil.CONN_LISTEN and c.laddr:
-                listens.add(f"{c.laddr.ip}:{c.laddr.port}")
+                listens.add(f"{c.laddr.ip}|{c.laddr.port}")
             elif c.raddr:
-                conns.add(f"{c.raddr.ip}:{c.raddr.port}:{c.status}")
+                conns.add(f"{c.raddr.ip}|{c.raddr.port}|{c.status}")
     except (psutil.AccessDenied, PermissionError):
         # net_connections needs privileges on macOS; degrade gracefully.
         pass
@@ -99,16 +101,18 @@ def diff_events(prev: Snapshot, now: Snapshot) -> list[Event]:
 
     # New outbound connections
     for c in now.conns - prev.conns:
-        ip, port, status = c.split(":", 2)
+        ip, port, status = c.split("|", 2)
+        port_i = int(port) if port.isdigit() else 0
         events.append(Event(ts=now.ts, kind="connection", host=HOST,
                             summary=f"new outbound connection {ip}:{port} ({status})",
-                            detail={"ip": ip, "port": int(port), "status": status}))
+                            detail={"ip": ip, "port": port_i, "status": status}))
 
     # New listening ports (a service started listening — classic anomaly signal)
     for l in now.listens - prev.listens:
+        ip, _, port = l.rpartition("|")
         events.append(Event(ts=now.ts, kind="listen", host=HOST,
-                            summary=f"new listening port {l}",
-                            detail={"addr": l}))
+                            summary=f"new listening port {ip}:{port}",
+                            detail={"addr": f"{ip}:{port}", "ip": ip, "port": port}))
 
     # New / departed logins
     for u in now.users - prev.users:

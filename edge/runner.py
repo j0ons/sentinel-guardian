@@ -27,13 +27,16 @@ import gpio                                  # physical actuation layer (no-op o
 
 CLOUD = os.getenv("SENTINEL_CLOUD", "http://127.0.0.1:8000").rstrip("/")
 INTERVAL = float(os.getenv("SENTINEL_INTERVAL", "5"))
+# The cloud reasons with qwen3.7-max, which can take tens of seconds for a novel event over
+# a large context. Give the POST room so verdicts aren't dropped to the buffer prematurely.
+POST_TIMEOUT = float(os.getenv("SENTINEL_POST_TIMEOUT", "60"))
 HOST = socket.gethostname()
 BUFFER = os.path.join(os.path.dirname(__file__), "outbox.jsonl")
 
 
 def post_event(payload: dict) -> dict | None:
     try:
-        r = requests.post(f"{CLOUD}/event", json=payload, timeout=10)
+        r = requests.post(f"{CLOUD}/event", json=payload, timeout=POST_TIMEOUT)
         r.raise_for_status()
         return r.json()
     except requests.RequestException:
