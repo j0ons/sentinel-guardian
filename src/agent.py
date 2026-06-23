@@ -19,10 +19,8 @@ import time
 
 from memory import Event, Memory
 from qwen_client import MODEL_FAST, chat, is_live
+from safety import event_is_threat_signature
 from tools import TOOL_SCHEMAS, execute
-
-# Threat-signature markers that must never be cleared by the cheap triage gate (safety floor).
-THREAT_MARKERS = (":4444:", ":1337:", ":31337:", ":5555:", ":6667:")
 
 # Terminal actions end the investigation; everything else is an investigative tool.
 TERMINAL_ACTIONS = ("mark_normal", "alert_user", "actuate")
@@ -142,7 +140,8 @@ class SentinelAgent:
         if entity is None:
             return False
         key = entity[0]
-        if any(m in key for m in THREAT_MARKERS):       # never fast-path an attack signature
+        # never fast-path an attack signature (position-aware; catches listen:...:4444 too)
+        if event_is_threat_signature(ev.detail, key):
             return False
         if key not in set(self.memory.known_normal_entities()):
             return False                                # only fast-path already-trusted entities

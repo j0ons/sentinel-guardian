@@ -38,14 +38,11 @@ persistent attack, not a new normal.
 
 Return ONLY the new baseline text (no preamble, no "Baseline vN" prefix)."""
 
-# Entity-key substrings that must NEVER be auto-promoted to known-normal, no matter how
-# often they are seen. The deterministic safety floor for the dreaming pass — a guard
-# against "seen-it-a-lot → trust-it" eroding threat sensitivity.
-THREAT_PORT_MARKERS = (":4444:", ":1337:", ":31337:", ":5555:", ":6667:")
-
-
-def _is_threat_entity(name: str) -> bool:
-    return any(m in name for m in THREAT_PORT_MARKERS)
+# Entities carrying an attack-port signature must NEVER be auto-promoted to known-normal,
+# however often seen — the deterministic safety floor for the dreaming pass, guarding against
+# "seen-it-a-lot → trust-it" eroding threat sensitivity. Single source of truth in safety.py
+# (position-aware: also catches listen:...:4444, which the old substring check missed).
+from safety import is_threat_entity_key as _is_threat_entity  # noqa: E402
 
 
 def consolidate(memory: Memory, host: str = "edge-0",
