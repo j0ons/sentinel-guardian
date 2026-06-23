@@ -19,11 +19,16 @@ CONSOLIDATION_PROMPT = """You are Sentinel's nightly consolidation process ("dre
 You are given: the previous baseline, the full list of entities seen on this host (with how
 often each appeared and whether it was ever alerted on), and the day's decisions.
 
-Rewrite the host's behavioral baseline: a concise, updated description of what is NORMAL on
-this host — the processes, ports, destinations, and users that routinely appear and are
-benign. Fold in anything that has now been seen many times without incident. Keep it tight
-and operational. This baseline will be the agent's reference tomorrow, so being precise here
-directly reduces false alarms.
+Write the host's behavioral baseline FRESH from the evidence: an analytical, operational
+description of what is NORMAL on this host — the specific processes, ports, destinations, and
+users that routinely appear and are benign, and WHY each is expected. Fold in anything seen
+many times without incident. Be concrete and specific to the evidence below.
+
+The "previous baseline" is given only for continuity — do NOT copy its wording or format. In
+particular, NEVER prefix your answer with "Baseline vN (auto)" or restate a generic template:
+that "(auto)" form is a placeholder used when no model was available, and echoing it back
+defeats the purpose. Produce genuine analysis in your own words, grouped by category
+(Processes / Ports / Destinations / Users / Notable patterns).
 
 CRITICAL: NEVER add attack signatures to the normal baseline, no matter how often they were
 seen. Connections to ephemeral high ports (4444, 1337, 31337…), known-bad destinations
@@ -31,7 +36,7 @@ seen. Connections to ephemeral high ports (4444, 1337, 31337…), known-bad dest
 attack benign. The baseline must keep scrutinizing these. Repeated exposure to a threat is a
 persistent attack, not a new normal.
 
-Return ONLY the new baseline text."""
+Return ONLY the new baseline text (no preamble, no "Baseline vN" prefix)."""
 
 # Entity-key substrings that must NEVER be auto-promoted to known-normal, no matter how
 # often they are seen. The deterministic safety floor for the dreaming pass — a guard
@@ -60,8 +65,14 @@ def consolidate(memory: Memory, host: str = "edge-0",
     ent_lines = [f"  {r['name']} (x{r['seen_count']}, normal={r['normal']})" for r in entities]
     dec_lines = [f"  {r['action']}: {r['reason']}" for r in decisions]
 
+    # Strip any prior "(auto)" stub framing so the model never sees the placeholder format to
+    # copy — early SIM-mode baselines were stubs and the model was parroting them back.
+    prev_for_prompt = prev_baseline
+    if "(auto)" in prev_for_prompt:
+        prev_for_prompt = "(no prior model-written baseline — write the first one from the evidence)"
+
     user = (
-        f"PREVIOUS BASELINE (v{prev_version}):\n{prev_baseline}\n\n"
+        f"PREVIOUS BASELINE (v{prev_version}):\n{prev_for_prompt}\n\n"
         f"ENTITIES SEEN ON THIS HOST:\n" + "\n".join(ent_lines) + "\n\n"
         f"TODAY'S DECISIONS:\n" + "\n".join(dec_lines) + "\n\n"
         "Rewrite the baseline."
