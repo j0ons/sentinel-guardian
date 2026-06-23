@@ -56,10 +56,12 @@ class PingIn(BaseModel):
 
 
 @app.get("/health")
-def health():
-    return {"ok": True, "mode": "live-qwen3.7-max" if is_live() else "stub/sim",
-            "baseline_version": MEMORY.baseline_version("edge-0"),
-            "known_normal": len(MEMORY.known_normal_entities())}
+async def health():
+    """Pure liveness — async + dependency-free so it ALWAYS answers fast, even while a
+    qwen3.7-max reasoning call holds the decision lock and saturates the sync threadpool.
+    (A blocking /health is what let the watchdog false-positive and restart a busy brain.)
+    The richer baseline/known-normal info now lives in /api/overview."""
+    return {"ok": True, "mode": "live-qwen3.7-max" if is_live() else "stub/sim"}
 
 
 @app.post("/event")

@@ -3,5 +3,8 @@ Description=Sentinel watchdog — restart cloud brain if /health is unresponsive
 
 [Service]
 Type=oneshot
-# If the brain is alive but hung (not answering HTTP within 8s), restart it.
-ExecStart=/bin/bash -c 'curl -fsS --max-time 8 http://127.0.0.1:8000/health >/dev/null || (echo "watchdog: /health failed, restarting sentinel-cloud" && systemctl restart sentinel-cloud)'
+# Only restart the brain if it's GENUINELY dead — not merely busy. A single qwen3.7-max
+# reasoning call can take 30s+ and (on the single-process server) briefly delays /health, so
+# an 8s one-shot check produced false positives that killed in-flight calls and caused
+# "CLOUD OFFLINE". Require THREE consecutive failures (30s each, 5s apart) before restarting.
+ExecStart=/bin/bash -c 'for i in 1 2 3; do curl -fsS --max-time 30 http://127.0.0.1:8000/health >/dev/null && exit 0; sleep 5; done; echo "watchdog: /health failed 3x, restarting sentinel-cloud" && systemctl restart sentinel-cloud'
