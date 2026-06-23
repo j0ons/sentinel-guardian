@@ -5,6 +5,91 @@ project can be resumed cold.
 
 ---
 
+## 2026-06-23 — Submission assets, a hidden dreaming bug, optimizations, two outages
+
+**Headline:** built the submission deliverables, then a full system checkup uncovered that
+the deployed "dreaming" was fake (stub, not Qwen). Fixed that + a cluster of robustness bugs
+exposed by trying to watch a busy host. System is now genuinely self-improving and hardened.
+Free qwen3.7-max quota ran out mid-session → now on pay-as-you-go from the $40 coupon.
+
+### Submission assets created
+- `docs/architecture.svg`/`.png` — submission architecture diagram (edge/cloud, 3-tier
+  memory, dreaming core; lands the three Qwen claims). Rendered via rsvg-convert.
+- `docs/05-WRITEUP.md` — Devpost write-up mirroring judging criteria (2 placeholder links).
+- `docs/02-PRIVACY.md` — privacy/data-handling (change-driven events, tailnet-only, retention).
+- `docs/06-HARDWARE.md` — Pi GPIO wiring/BOM (physical-device requirement).
+- `edge/gpio.py` — physical actuation (green/amber/red LED + buzzer on the verdict; lazy
+  RPi.GPIO import = silent no-op off a Pi). Wired into runner.apply_action.
+- `docs/07-DEMO-RUN.md` — recording run-sheet.
+- `edge/demo_activity.py` — paced realistic-activity generator for demo fill.
+
+### Track-4 rubric: closed the two gaps (physical device + privacy). All 7 items now met.
+
+### The big bug — dreaming was FAKE in production
+- Symptom: every baseline on CT201 was the deterministic `(auto)` stub, not qwen3.7-max.
+  The novel core wasn't actually running live.
+- Misdirection: NOT the stub fallback. `chat()` returned 211 real chars, is_live=True, the
+  fallback condition was correctly False. The MODEL itself was copying the `(auto)` format —
+  early SIM baselines fed back as "PREVIOUS BASELINE" taught it to parrot the template. A
+  self-reinforcing pollution loop: each stub baseline bred another.
+- Fix (`consolidate.py`): prompt forbids copying prior wording / the `(auto)` template,
+  demands fresh categorized analysis; strip `(auto)` framing from the prev-baseline shown.
+  Verified: prod dream v14 now writes real analysis ("pickup: Postfix daemon, observed 142×").
+- Also: CT201 was running STALE code (missing the safety floor too) → redeployed to latest.
+- Hardened `qwen_client.chat()` with retry/backoff + explicit error (was silently degrading).
+- Deploy hygiene: service SENTINEL_SIM=0 baked in; `.env` excluded from the deploy tarball.
+
+### Optimizations (score-moving)
+- **#1 made 1M-context REAL**: agent fed only a fixed 200-event cap (a sliver of the window,
+  undercutting the headline claim). Now token-budgeted, pulls full history; context-usage
+  stats exposed on `/api/overview` (verified prod: 234/234 events, ~3767 tokens). Demo line:
+  "reasoning over its entire N-event history in one context."
+- **#2 wired qwen3.6-flash cost-routing**: every event used to hit qwen3.7-max; now a cheap
+  flash gate clears obvious-normal known entities, never fast-paths a threat signature.
+
+### Bugs found by pointing the collector at the busy Proxmox host (instead of empty CT202)
+- **Latency regression**: feeding full history into EVERY decision pushed one decision to
+  ~31s. Fixed — split budget: per-decision SENTINEL_DECISION_TOKENS=8k (fast ~9s),
+  consolidation keeps full 200k.
+- **IPv6 crash**: connections packed `ip:port:status` and split on `:` corrupted IPv6 addrs
+  → crashed every diff cycle on any host with IPv6. Now `|` delimiter.
+- **Edge POST timeout** 10s < 9-30s reasoning → raised to 60s (SENTINEL_POST_TIMEOUT).
+- **Noise/volume**: busy host floods + wastes tokens → filter (drop TIME_WAIT/loopback,
+  prioritize login>listen>external-conn>process, cap SENTINEL_MAX_EVENTS_PER_CYCLE=6).
+- Fixed `sentinel-edge.service` StartLimitIntervalSec (wrong section).
+- Decision: Proxmox is the real/authentic vantage point but RUN ON-DEMAND for the demo, not
+  24/7 (a steady host is quiet anyway + saves coupon). PVE collector staged at
+  `/opt/sentinel-edge` (psutil installed via apt).
+
+### Two outages (both fixed)
+1. Proxmox host's **Tailscale node drifted offline** (daemon up, control heartbeat stale) →
+   dashboard unreachable. Fix: clean `systemctl restart tailscaled`. (My `tailscale up
+   --reset` attempt briefly knocked it fully off-tailnet + dropped SSH — mistake; don't use
+   --reset. Recurrence one-liner: `ssh root@100.114.4.79 systemctl restart tailscaled`.)
+2. **Self-inflicted "CLOUD OFFLINE"**: watchdog restarted the brain if `/health` didn't
+   answer in 8s, but today's slower reasoning (9-30s, holding the global LOCK + saturating
+   the sync threadpool) blocked /health → watchdog kept KILLING the busy brain. Fix:
+   `/health` now async + dependency-free (answers ~0.001s even mid-reasoning, verified 5/5
+   under load); watchdog requires 3 consecutive 30s failures before restart.
+
+### Billing
+- Free qwen3.7-max quota EXHAUSTED mid-session → now pay-as-you-go from the $40 coupon
+  (verified calls still work → "Stop When Free Quota Used Up" not enabled). Spend tiny
+  (~8.9k tokens/decision, est ~2¢ of usage). Don't run the live collector 24/7. Authoritative
+  balance: Alibaba console → Expenses → Coupons.
+
+### End state
+System live + hardened + genuinely self-improving (real Qwen baselines). Dashboard back up.
+Advice given: FREEZE infra, pivot to submission deliverables (GitHub push, video, key
+rotation) — none of which touch the live system or burn coupon.
+
+### Still to do (need user)
+- Rotate the chat-exposed Qwen key; push to public GitHub (fill 2 links in 05-WRITEUP.md);
+  film the <3-min video (money shot = `demo_recall.py`; run Proxmox collector live during
+  recording + scripted `demo_activity.py --attack` for the climax). Deadline Jul 9 2pm PDT.
+
+---
+
 ## 2026-06-22 — GO LIVE: flipped Sentinel to real qwen3.7-max on Proxmox/Tailscale
 
 **Headline:** Sentinel went from "built but stuck in SIM mode awaiting credits" to
