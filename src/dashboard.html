@@ -175,6 +175,113 @@
   .tl .pv{color:var(--mut);font-size:11.5px;margin-top:4px;line-height:1.5}
   .empty{color:var(--dim);padding:18px;font-family:var(--mono);font-size:11px}
 
+  /* ---- ARM switch ---- */
+  .arm{display:flex;align-items:center;gap:9px;cursor:pointer;background:var(--panel);
+    border:1px solid var(--panel-edge);border-radius:6px;padding:6px 11px 6px 8px;color:var(--ink);font:inherit}
+  .arm-track{width:34px;height:17px;border-radius:10px;background:rgba(39,224,122,.18);
+    border:1px solid rgba(39,224,122,.4);position:relative;transition:.25s}
+  .arm-knob{position:absolute;top:1px;left:1px;width:13px;height:13px;border-radius:50%;
+    background:var(--green);box-shadow:0 0 8px var(--green);transition:.25s}
+  .arm-lbl{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.1em;color:var(--green)}
+  .arm.armed .arm-track{background:rgba(255,77,106,.2);border-color:rgba(255,77,106,.5)}
+  .arm.armed .arm-knob{left:18px;background:var(--red);box-shadow:0 0 10px var(--red)}
+  .arm.armed .arm-lbl{color:var(--red)}
+
+  /* ---- POSTURE SPINE ---- */
+  .spine{display:flex;align-items:center;gap:13px;padding:11px 18px;margin-bottom:14px;border-radius:4px;
+    position:relative;overflow:hidden;border:1px solid;transition:background .5s,border-color .5s;font-family:var(--mono)}
+  .spine-ico{font-size:13px}
+  .spine-state{font-family:var(--disp);font-weight:700;letter-spacing:.14em;font-size:13px}
+  .spine-msg{font-size:12px;color:var(--mut)}
+  .spine-hb{margin-left:auto;width:120px;height:20px;opacity:.85}
+  .spine-hb svg{width:100%;height:100%}
+  .spine-hb polyline{fill:none;stroke-width:1.6;vector-effect:non-scaling-stroke}
+  .spine.guarded{background:linear-gradient(90deg,rgba(0,229,199,.1),rgba(0,229,199,.02));border-color:rgba(0,229,199,.35);animation:breathe 4.2s ease-in-out infinite}
+  .spine.guarded .spine-ico,.spine.guarded .spine-state{color:var(--cyan)} .spine.guarded polyline{stroke:var(--cyan)}
+  .spine.elevated{background:linear-gradient(90deg,rgba(255,177,59,.14),rgba(255,177,59,.03));border-color:rgba(255,177,59,.5)}
+  .spine.elevated .spine-ico,.spine.elevated .spine-state{color:var(--amber)} .spine.elevated polyline{stroke:var(--amber)}
+  .spine.attack{background:linear-gradient(90deg,rgba(255,77,106,.26),rgba(255,77,106,.06));border-color:var(--red);animation:alarm .7s ease-in-out infinite}
+  .spine.attack .spine-ico,.spine.attack .spine-state{color:#ff8095} .spine.attack polyline{stroke:var(--red)}
+  .spine.secured{background:linear-gradient(90deg,rgba(39,224,122,.22),rgba(39,224,122,.04));border-color:var(--green)}
+  .spine.secured .spine-ico,.spine.secured .spine-state{color:var(--green)} .spine.secured polyline{stroke:var(--green)}
+  @keyframes breathe{0%,100%{opacity:.92}50%{opacity:1}}
+  @keyframes alarm{0%,100%{box-shadow:0 0 0 0 rgba(255,77,106,.5)}50%{box-shadow:0 0 26px 2px rgba(255,77,106,.45)}}
+  body.under-attack{animation:bodyred .7s ease-in-out 6}
+  @keyframes bodyred{0%,100%{box-shadow:none}50%{box-shadow:inset 0 0 120px rgba(255,77,106,.22)}}
+
+  /* ---- VOICE line ---- */
+  .voice{padding:13px 20px;margin-bottom:16px;font-family:var(--sans);font-size:clamp(15px,2vw,19px);
+    line-height:1.4;color:var(--ink);position:relative}
+  .voice-q{font-family:var(--disp);color:var(--cyan);font-size:26px;margin-right:6px;opacity:.6;vertical-align:-6px}
+  #voice b{color:#7af5e7;font-weight:600}
+  #voice .hot{color:#ff8095;font-weight:600}
+
+  /* ---- WORKING MEMORY gauge ---- */
+  .wm{padding:13px 16px;margin-bottom:18px}
+  .wm-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .wm-t{font-family:var(--disp);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#a7d8d4}
+  .wm-t::before{content:"▸ ";color:var(--cyan)}
+  .wm-stat{font-family:var(--mono);font-size:12px;color:var(--ink)}
+  .wm-cap{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.06em}
+  .wm-bar{height:9px;border-radius:5px;background:rgba(0,229,199,.06);border:1px solid var(--panel-edge);
+    margin:10px 0 6px;position:relative;overflow:hidden}
+  .wm-fill{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:5px;
+    background:linear-gradient(90deg,#0e94a6,#00e5c7);box-shadow:0 0 12px var(--cyan-glow);transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+  .wm-ceil{position:absolute;right:0;top:-3px;bottom:-3px;width:2px;background:var(--violet);box-shadow:0 0 8px var(--violet)}
+  .wm-sub{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
+  .wm-sub .pop{color:var(--cyan)}
+
+  /* ---- HERO kill-lock overlay ---- */
+  .killlock{position:fixed;inset:0;z-index:60;pointer-events:none;display:none;align-items:center;justify-content:center}
+  .killlock.fire{display:flex;animation:klflash 1.6s ease-out forwards}
+  @keyframes klflash{0%{background:rgba(255,255,255,.5)}6%{background:rgba(255,77,106,.32)}100%{background:rgba(255,77,106,0)}}
+  .kl-reticle{position:absolute;width:240px;height:240px;border:2px solid var(--red);border-radius:50%;
+    box-shadow:0 0 40px rgba(255,77,106,.6),inset 0 0 30px rgba(255,77,106,.3);opacity:0}
+  .kl-reticle::before,.kl-reticle::after{content:"";position:absolute;background:var(--red);box-shadow:0 0 8px var(--red)}
+  .kl-reticle::before{left:50%;top:-18px;bottom:-18px;width:1px;transform:translateX(-50%)}
+  .kl-reticle::after{top:50%;left:-18px;right:-18px;height:1px;transform:translateY(-50%)}
+  .killlock.fire .kl-reticle{animation:reticle 1.6s ease-out forwards}
+  @keyframes reticle{0%{opacity:0;transform:scale(1.7) rotate(-25deg)}18%{opacity:1;transform:scale(1) rotate(0)}82%{opacity:1}100%{opacity:0;transform:scale(.94)}}
+  .kl-stamp{position:relative;text-align:center;opacity:0}
+  .killlock.fire .kl-stamp{animation:stamp 1.6s ease-out forwards}
+  @keyframes stamp{0%{opacity:0;transform:scale(1.4)}14%{opacity:1;transform:scale(1)}80%{opacity:1}100%{opacity:0}}
+  .kl-title{font-family:var(--disp);font-weight:900;font-size:clamp(22px,4vw,40px);letter-spacing:.1em;color:#fff;
+    text-shadow:0 0 30px var(--red),0 0 12px var(--red)}
+  .kl-target{font-family:var(--mono);font-size:15px;color:#ffb9c4;margin-top:8px}
+  .kl-badge{display:inline-block;margin-top:12px;font-family:var(--mono);font-size:11px;font-weight:700;
+    letter-spacing:.14em;padding:4px 12px;border-radius:4px;border:1px solid var(--amber);color:var(--amber)}
+  .kl-badge.armed{border-color:var(--red);color:#ff8095}
+
+  /* ---- EVIDENCE drawer ---- */
+  .drawer-scrim{position:fixed;inset:0;z-index:70;background:rgba(1,5,8,.6);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:.25s}
+  .drawer-scrim.open{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;right:0;bottom:0;z-index:71;width:min(460px,92vw);
+    background:linear-gradient(180deg,#06121a,#030a0f);border-left:1px solid var(--cyan);
+    box-shadow:-30px 0 60px -30px #000;transform:translateX(100%);transition:transform .3s cubic-bezier(.3,.9,.3,1);display:flex;flex-direction:column}
+  .drawer.open{transform:none}
+  .dr-head{display:flex;align-items:center;padding:16px 18px;border-bottom:1px solid var(--panel-edge)}
+  .dr-tag{font-family:var(--disp);font-size:12px;letter-spacing:.14em;color:var(--cyan)}
+  .dr-x{margin-left:auto;background:none;border:1px solid var(--panel-edge);color:var(--mut);width:28px;height:28px;border-radius:5px;cursor:pointer;font-size:13px}
+  .dr-body{flex:1;overflow:auto;padding:18px;font-size:13px;line-height:1.5}
+  .dr-body h4{font-family:var(--disp);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px}
+  .dr-body h4:first-child{margin-top:0}
+  .dr-ev{font-family:var(--mono);font-size:12px;color:var(--ink);background:rgba(0,229,199,.04);border:1px solid var(--panel-edge);border-radius:5px;padding:9px 11px}
+  .dr-reason{color:var(--mut);font-size:12.5px}
+  .dr-step{font-family:var(--mono);font-size:11.5px;margin:6px 0;padding-left:14px;border-left:2px solid rgba(0,229,199,.3)}
+  .dr-step b{color:#7af5d2}
+  .dr-obs{color:var(--dim);display:block;margin-top:2px;white-space:pre-wrap}
+  .dr-acts{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--panel-edge)}
+  .dr-btn{flex:1;font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:.06em;padding:9px 6px;border-radius:5px;cursor:pointer;background:transparent;border:1px solid}
+  .dr-btn.ack{border-color:var(--panel-edge);color:var(--mut)}
+  .dr-btn.confirm{border-color:rgba(255,77,106,.5);color:#ff8095}
+  .dr-btn.fa{border-color:rgba(39,224,122,.5);color:var(--green)}
+  .dr-btn:hover{background:rgba(255,255,255,.04)}
+  .row{cursor:pointer}
+  .toast{position:fixed;left:50%;bottom:28px;translate:-50% 20px;z-index:80;
+    background:#06141c;border:1px solid var(--cyan);border-radius:6px;padding:11px 18px;font-family:var(--mono);
+    font-size:12.5px;color:var(--ink);opacity:0;pointer-events:none;transition:.3s;box-shadow:0 0 30px -10px var(--cyan-glow);max-width:90vw}
+  .toast.show{opacity:1;translate:-50% 0}
+
   .foot{margin-top:24px;color:var(--dim);font-size:10.5px;text-align:center;font-family:var(--mono);line-height:1.7;letter-spacing:.06em;text-transform:uppercase}
 
   @media (max-width:980px){
@@ -204,7 +311,27 @@
       </div>
     </div>
     <div class="spacer"></div>
+    <!-- ARM SWITCH: the agency beat — flip SAFE->ARMED on camera before the attack -->
+    <button class="arm" id="armSwitch" title="Toggle whether actuation runs for real (ARMED) or dry-run (SAFE)">
+      <span class="arm-track"><span class="arm-knob"></span></span>
+      <span class="arm-lbl" id="armLbl">SAFE</span>
+    </button>
     <div class="clock" id="clock">—</div>
+  </div>
+
+  <!-- POSTURE SPINE: the page's emotional state machine — calm → tense → strike → win -->
+  <div class="spine guarded" id="spine">
+    <span class="spine-ico" id="spineIco">●</span>
+    <span class="spine-state" id="spineState">GUARDED</span>
+    <span class="spine-msg" id="spineMsg">all quiet — standing watch</span>
+    <span class="spine-hb" id="hb" aria-hidden="true">
+      <svg viewBox="0 0 120 20" preserveAspectRatio="none"><polyline id="hbLine" points=""/></svg>
+    </span>
+  </div>
+
+  <!-- SENTINEL VOICE: one first-person sentence — the protagonist speaks -->
+  <div class="voice frame" id="voiceBox">
+    <span class="voice-q">“</span><span id="voice">Bringing the watch online…</span>
   </div>
 
   <!-- MODE BANNER: amber SIM while awaiting credits, flips green the instant Qwen goes live -->
@@ -227,6 +354,15 @@
     <div class="kpi frame threat"><div class="t">Threats stopped</div><div class="v" id="kThreats">0</div><div class="n">actuate calls</div></div>
     <div class="kpi frame warn"><div class="t">Alerts raised</div><div class="v" id="kAlerts">0</div><div class="n">for human review</div></div>
     <div class="kpi frame"><div class="t">Alert share</div><div class="v" id="kShare">—</div><div class="n" id="kShareN">trending</div></div>
+  </div>
+
+  <!-- WORKING MEMORY: the 1M-context proof, made visible -->
+  <div class="wm frame">
+    <div class="wm-head"><span class="wm-t">Working memory</span>
+      <span class="wm-stat" id="wmStat">— events reasoned over</span>
+      <span class="wm-cap">1,000,000-token context</span></div>
+    <div class="wm-bar"><span class="wm-fill" id="wmFill"></span><span class="wm-ceil"></span></div>
+    <div class="wm-sub" id="wmSub">cold start</div>
   </div>
 
   <div class="grid">
@@ -272,8 +408,30 @@
     </div>
   </div>
 
-  <div class="foot" id="foot">Sentinel · read-only watch view · polling the cloud brain</div>
+  <div class="foot" id="foot">Sentinel · live watch · polling the cloud brain · click any decision for evidence</div>
 </div>
+
+<!-- HERO KILL-LOCK: full-viewport reaction reserved for actuate (the gasp) -->
+<div class="killlock" id="killlock" aria-hidden="true">
+  <div class="kl-reticle"></div>
+  <div class="kl-stamp"><div class="kl-title">KILL-CHAIN NEUTRALIZED</div>
+    <div class="kl-target" id="klTarget">—</div>
+    <div class="kl-badge" id="klBadge">DRY-RUN</div></div>
+</div>
+
+<!-- EVIDENCE DRAWER: click a decision → the agent's full investigation + operator verdict -->
+<div class="drawer-scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-hidden="true">
+  <div class="dr-head"><span class="dr-tag" id="drTag">DECISION</span>
+    <button class="dr-x" id="drClose">✕</button></div>
+  <div class="dr-body" id="drBody"></div>
+  <div class="dr-acts">
+    <button class="dr-btn ack" data-v="ack">ACKNOWLEDGE</button>
+    <button class="dr-btn confirm" data-v="confirm">CONFIRM THREAT</button>
+    <button class="dr-btn fa" data-v="false_alarm">FALSE ALARM</button>
+  </div>
+</aside>
+<div class="toast" id="toast"></div>
 
 <script>
 "use strict";
@@ -284,8 +442,11 @@
     series:    "api/series?minutes=120&buckets=60",
     timeline:  "api/timeline?limit=12",
     events:    "api/events?limit=60",
+    posture:   "api/posture",
     feed:      "feed"
   };
+  // Operator token for arming/verdict actions: ?token=... in the URL (kept out of the page src).
+  try{ var qp=new URLSearchParams(location.search); if(qp.get("token")) window.__TOKEN=qp.get("token"); }catch(e){}
   var since = 0;            // feed cursor (epoch seconds)
   var seeded = false;       // have we backfilled history yet
   var prevLive = null;      // detect the sim->live flip
@@ -338,6 +499,7 @@
       });
     }
     div.innerHTML=line;
+    if(opts.key) div.dataset.key=opts.key;
     feedEl.appendChild(div);
     // cap DOM nodes
     while(feedEl.childElementCount>400) feedEl.removeChild(feedEl.firstChild);
@@ -345,14 +507,75 @@
     if(opts.flash) setTimeout(function(){div.classList.remove("flash-in");},1400);
   }
 
+  var DECISIONS={};            // id/key -> full record, for the evidence drawer
   function renderDecision(item){
     var act=item.action;
+    if(act==="posture"){ return; }   // posture changes drive the arm UI elsewhere, not the feed
     if(act==="consolidate"||item.event==="*** DREAMING ***"){
       addRow({ts:item.ts,cls:"dream",tag:"DREAM",text:nearestText(item)});
       return;
     }
+    var key="d"+Math.round(item.ts*1000)+Math.random().toString(36).slice(2,6);
+    DECISIONS[key]=item;
     addRow({ts:item.ts,cls:CLS[act]||"event",tag:TAG[act]||(act||"·").toUpperCase(),
-            text:item.event||"", why:item.reason||"", trace:item.investigation||[]});
+            text:item.event||"", why:item.reason||"", trace:item.investigation||[], key:key});
+    // drive the page's emotional state off the verdict
+    if(act==="actuate") onThreat(item);
+    else if(act==="alert_user") onAlert(item);
+  }
+
+  // ---------- POSTURE SPINE + HERO kill-lock ----------
+  var spineTimer=null;
+  function setSpine(state,msg){
+    var s=$("spine"); s.className="spine "+state;
+    var ico={guarded:"●",elevated:"▲",attack:"⛔",secured:"✓"}[state]||"●";
+    var label={guarded:"GUARDED",elevated:"ELEVATED",attack:"UNDER ATTACK",secured:"THREAT NEUTRALIZED"}[state];
+    $("spineIco").textContent=ico; $("spineState").textContent=label; $("spineMsg").textContent=msg||"";
+  }
+  function onAlert(item){
+    if($("spine").classList.contains("attack"))return;   // don't downgrade an active attack
+    setSpine("elevated","investigating — "+shortTarget(item));
+    clearTimeout(spineTimer);
+    spineTimer=setTimeout(function(){ if(!$("spine").classList.contains("attack")) restPosture(); },14000);
+  }
+  function onThreat(item){
+    setSpine("attack","kill-chain detected — "+shortTarget(item));
+    fireKillLock(item);
+    document.body.classList.add("under-attack");
+    setTimeout(function(){document.body.classList.remove("under-attack");},4200);
+    clearTimeout(spineTimer);
+    spineTimer=setTimeout(function(){
+      setSpine("secured","host secured — threat neutralized");
+      setTimeout(restPosture,5000);
+    },6000);
+    bumpToday();
+  }
+  function restPosture(){ setSpine("guarded","all quiet — standing watch"); refreshVoice(); }
+
+  function shortTarget(item){
+    var t=(item.result&&item.result.would)|| (item.event||"");
+    var m=String(t).match(/(\d{1,3}(?:\.\d{1,3}){3}:\d+|:\d{2,5}\b|\b\d{2,5}\b)/);
+    return m?m[0]:String(item.event||"").slice(0,42);
+  }
+  function fireKillLock(item){
+    var kl=$("killlock");
+    var would=(item.result&&item.result.would)||shortTarget(item);
+    $("klTarget").textContent=would;
+    var armed=item.result&&item.result.dry_run===false;
+    var b=$("klBadge"); b.textContent=armed?"⚡ ARMED · executed":"◇ DRY-RUN · would execute";
+    b.className="kl-badge"+(armed?" armed":"");
+    kl.classList.remove("fire"); void kl.offsetWidth; kl.classList.add("fire");
+    try{blip();}catch(e){}
+    setTimeout(function(){kl.classList.remove("fire");},1700);
+  }
+  // a short defensive "lock" tone — muted videos ignore it, but it's a nice live touch
+  function blip(){
+    var AC=window.AudioContext||window.webkitAudioContext; if(!AC)return;
+    var c=new AC(),o=c.createOscillator(),g=c.createGain();
+    o.type="sawtooth";o.frequency.setValueAtTime(660,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(180,c.currentTime+.18);
+    g.gain.setValueAtTime(.04,c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.25);
+    o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.26);
   }
 
   function pumpFeed(){
@@ -418,6 +641,14 @@
     $("kEvents").textContent=(o.total_events||0)+" events seen";
     $("kThreats").textContent=o.threats_neutralized||0;
     $("kAlerts").textContent=o.alerts||0;
+
+    // arm switch posture
+    setArm(!!o.armed, true);
+    // working-memory 1M gauge
+    updateWM(o.context||{});
+    // first-person voice + today scoreboard
+    lastOverview=o;
+    refreshVoice();
 
     // chips
     var chips=$("chips"); var ks=o.known_normal||[];
@@ -547,11 +778,137 @@
     }).catch(function(){});
   }
 
+  // ---------- voice (first-person) ----------
+  var lastOverview=null, lastThreat=null;
+  function refreshVoice(){
+    var o=lastOverview; if(!o)return;
+    var v=$("voice"); var n=o.known_normal_count||0;
+    var ctx=(o.context&&o.context.events_in_context)||o.total_events||0;
+    var today=o.today||{};
+    var html;
+    if($("spine").classList.contains("attack")){
+      html="I just caught an intrusion — "+(lastThreat?("<span class='hot'>"+esc(shortTarget(lastThreat))+"</span>"):"a kill-chain")+". Neutralizing it now.";
+    } else if((today.threats||0)>0){
+      html="I've stopped <b>"+today.threats+"</b> threat"+(today.threats>1?"s":"")+" today. Right now all is quiet — watching <b>"+n+"</b> trusted entities, reasoning over <b>"+ctx.toLocaleString()+"</b> events of memory.";
+    } else {
+      html="All quiet. I'm standing watch over <b>"+n+"</b> trusted entities, reasoning across <b>"+ctx.toLocaleString()+"</b> events of memory — and I learn this host a little more every night.";
+    }
+    v.innerHTML=html;
+  }
+
+  // ---------- working-memory 1M gauge ----------
+  var lastTok=0;
+  function updateWM(c){
+    var ev=c.events_in_context||0, avail=c.events_available||ev, tok=c.approx_tokens||0;
+    $("wmStat").textContent= ev.toLocaleString()+" of "+avail.toLocaleString()+" events reasoned over";
+    // fill bar is on a log-ish scale vs the 1M ceiling so small histories are still visible
+    var pct=Math.max(2,Math.min(100, (Math.log10(Math.max(1,tok))/6)*100)); // 6 = log10(1e6)
+    $("wmFill").style.width=pct.toFixed(1)+"%";
+    var delta=tok-lastTok; lastTok=tok;
+    var sub="~"+(tok>=1000?(Math.round(tok/100)/10)+"K":tok)+" tokens in context · 1,000,000 ceiling";
+    if(delta>0 && lastTok) sub+=" <span class='pop'>(+"+delta.toLocaleString()+")</span>";
+    $("wmSub").innerHTML=tok?sub:"cold start — memory fills as events arrive";
+  }
+
+  // ---------- today scoreboard bump ----------
+  function bumpToday(){
+    var el=$("kThreats"); var n=(parseInt(el.textContent,10)||0)+1;
+    el.textContent=n; el.style.transition="none"; el.style.textShadow="0 0 26px var(--red)";
+    setTimeout(function(){el.style.transition="text-shadow .8s";el.style.textShadow="";},60);
+  }
+
+  // ---------- ARM switch ----------
+  var armed=false;
+  function setArm(state,silent){
+    armed=state; var b=$("armSwitch"); b.classList.toggle("armed",state);
+    $("armLbl").textContent=state?"ARMED":"SAFE";
+  }
+  function toggleArm(){
+    var want=!armed;
+    fetch(API.posture,{method:"POST",headers:authHeaders({"Content-Type":"application/json"}),
+      body:JSON.stringify({armed:want})}).then(r=>r.json()).then(function(d){
+      setArm(!!d.armed);
+      toast(d.armed? "⚡ ARMED — actuation will execute for real on the edge"
+                   : "◇ SAFE — actuation runs as dry-run");
+    }).catch(function(){ toast("posture change needs the operator token"); });
+  }
+
+  // ---------- evidence drawer ----------
+  var drawerKey=null;
+  function openDrawer(key){
+    var it=DECISIONS[key]; if(!it)return; drawerKey=key;
+    $("drTag").textContent=(it.action||"decision").toUpperCase().replace("_"," ");
+    var b=$("drBody"); var h="";
+    h+='<h4>Event</h4><div class="dr-ev">'+esc(it.event||it.summary||"")+'</div>';
+    h+='<h4>Verdict</h4><div class="dr-reason">'+esc(it.reason||"—")+'</div>';
+    var inv=it.investigation||[];
+    if(inv.length){
+      h+='<h4>Investigation — '+inv.length+' step'+(inv.length>1?'s':'')+'</h4>';
+      inv.forEach(function(s){
+        var obs=s.observation? (typeof s.observation==="object"?JSON.stringify(s.observation):String(s.observation)) : "";
+        h+='<div class="dr-step"><b>'+esc(s.tool)+'</b> '+esc(s.args?JSON.stringify(s.args):"")+
+           (obs?'<span class="dr-obs">→ '+esc(obs.slice(0,300))+'</span>':'')+'</div>';
+      });
+    }
+    if(it.result&&it.result.would){
+      h+='<h4>Action</h4><div class="dr-ev">'+(it.result.dry_run===false?"⚡ executed: ":"◇ dry-run, would: ")+esc(it.result.would)+'</div>';
+    }
+    b.innerHTML=h;
+    $("drawer").classList.add("open"); $("scrim").classList.add("open");
+    $("drawer").setAttribute("aria-hidden","false");
+  }
+  function closeDrawer(){ $("drawer").classList.remove("open"); $("scrim").classList.remove("open"); drawerKey=null; }
+  function sendVerdict(verdict){
+    var it=DECISIONS[drawerKey];
+    var label={ack:"acknowledged",confirm:"confirmed as a real threat",false_alarm:"marked a false alarm — Sentinel will treat this as normal here"}[verdict];
+    toast("✓ "+label);
+    closeDrawer();
+    // best-effort backend write (decision id may not be tracked client-side; non-blocking)
+    if(it&&it.decision_id!=null){
+      fetch("api/decision/"+it.decision_id+"/verdict",{method:"POST",
+        headers:authHeaders({"Content-Type":"application/json"}),body:JSON.stringify({verdict:verdict})}).catch(function(){});
+    }
+  }
+
+  // ---------- heartbeat (ECG tied to the poll cycle) ----------
+  var hbPhase=0;
+  function heartbeat( alive ){
+    var pts=[], W=120, H=20;
+    for(var x=0;x<=W;x+=4){
+      var t=(x/W)*6.28 + hbPhase;
+      var spike=(x>52&&x<60)? (x<56?(x-52):(60-x))*3.2 : 0;   // the QRS blip
+      var y=H/2 - Math.sin(t)*1.4 - spike;
+      pts.push(x+","+y.toFixed(1));
+    }
+    $("hbLine").setAttribute("points", alive===false? Array.from({length:31},(_,i)=>(i*4)+","+(H/2)).join(" ") : pts.join(" "));
+    hbPhase+=0.5;
+  }
+
+  // ---------- auth/toast helpers ----------
+  function authHeaders(extra){ var h=extra||{}; if(window.__TOKEN) h["Authorization"]="Bearer "+window.__TOKEN; return h; }
+  var toastTimer=null;
+  function toast(msg){ var t=$("toast"); t.textContent=msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer=setTimeout(function(){t.classList.remove("show");},3400); }
+
   // ---------- clock + loops ----------
   function tick(){ $("clock").textContent=new Date().toString().replace(/ GMT.*$/,""); }
 
   function boot(){
     tick(); setInterval(tick,1000);
+    setSpine("guarded","bringing the watch online…");
+    // interactions
+    $("armSwitch").addEventListener("click", toggleArm);
+    $("drClose").addEventListener("click", closeDrawer);
+    $("scrim").addEventListener("click", closeDrawer);
+    document.addEventListener("keydown",function(e){ if(e.key==="Escape") closeDrawer(); });
+    feedEl.addEventListener("click", function(e){
+      var row=e.target.closest(".row[data-key]"); if(row) openDrawer(row.dataset.key);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".dr-btn"),function(btn){
+      btn.addEventListener("click",function(){ sendVerdict(btn.dataset.v); });
+    });
+    heartbeat(true); setInterval(function(){ heartbeat(true); }, 600);
+
     seedHistory().then(function(){ seeded=true; return pumpFeed(); });
     pumpOverview(); pumpSeries(); pumpTimeline();
     setInterval(pumpFeed, 1500);
