@@ -16,6 +16,7 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import socket
 import time
 from dataclasses import dataclass, field
@@ -88,8 +89,38 @@ def snapshot() -> Snapshot:
                     users=users, meta={"cpu": cpu, "mem": mem})
 
 
+# Noise control. A busy host (e.g. a Proxmox node) emits far more raw deltas than deep
+# per-event reasoning can keep up with — and every event reasoned costs tokens. A guardian
+# should focus on security-relevant signal, not transient churn. So we (1) drop noise,
+# (2) prioritise the interesting kinds, and (3) cap events per cycle. Tunables via env.
+MAX_EVENTS_PER_CYCLE = int(os.getenv("SENTINEL_MAX_EVENTS_PER_CYCLE", "6"))
+_NOISE_STATUSES = {"TIME_WAIT", "CLOSE_WAIT", "LAST_ACK", "FIN_WAIT1", "FIN_WAIT2", "CLOSING"}
+_LOOPBACK_PREFIXES = ("127.", "::1")
+# Higher = more security-interesting → reasoned first when we have to cap.
+_KIND_PRIORITY = {"login": 0, "listen": 1, "connection": 2, "process": 3}
+
+
+def _is_noise_conn(ip: str, status: str) -> bool:
+    """Transient/loopback connections that aren't worth a reasoning call."""
+    if status in _NOISE_STATUSES:
+        return True
+    if ip.startswith(_LOOPBACK_PREFIXES) or ip in ("0.0.0.0", "::", ""):
+        return True
+    return False
+
+
+def _is_external(ip: str) -> bool:
+    """Rough 'leaves the local network' test — external egress is more interesting."""
+    return not (ip.startswith(("10.", "192.168.", "172.", "127.", "169.254.", "fe80", "::1"))
+                or ip in ("0.0.0.0", "::", ""))
+
+
 def diff_events(prev: Snapshot, now: Snapshot) -> list[Event]:
-    """Turn the delta between two snapshots into discrete events worth reasoning about."""
+    """Turn the delta between two snapshots into discrete, security-relevant events.
+
+    Filters noise and caps volume so deep reasoning (and token spend) stays bounded on a
+    busy host. The cap keeps the highest-signal events (logins > new listeners > external
+    connections > new processes) and drops the transient tail."""
     events: list[Event] = []
 
     # New processes
@@ -99,13 +130,16 @@ def diff_events(prev: Snapshot, now: Snapshot) -> list[Event]:
                                 summary=f"new process started: {name} (pid {pid})",
                                 detail={"pid": pid, "name": name}))
 
-    # New outbound connections
+    # New outbound connections (skip transient/loopback noise)
     for c in now.conns - prev.conns:
         ip, port, status = c.split("|", 2)
+        if _is_noise_conn(ip, status):
+            continue
         port_i = int(port) if port.isdigit() else 0
         events.append(Event(ts=now.ts, kind="connection", host=HOST,
                             summary=f"new outbound connection {ip}:{port} ({status})",
-                            detail={"ip": ip, "port": port_i, "status": status}))
+                            detail={"ip": ip, "port": port_i, "status": status,
+                                    "external": _is_external(ip)}))
 
     # New listening ports (a service started listening — classic anomaly signal)
     for l in now.listens - prev.listens:
@@ -119,7 +153,11 @@ def diff_events(prev: Snapshot, now: Snapshot) -> list[Event]:
         events.append(Event(ts=now.ts, kind="login", host=HOST,
                             summary=f"user logged in: {u}", detail={"user": u}))
 
-    return events
+    # Prioritise by security interest, then external-first within connections, and cap volume.
+    def _rank(e: Event) -> tuple:
+        return (_KIND_PRIORITY.get(e.kind, 9), 0 if e.detail.get("external") else 1)
+    events.sort(key=_rank)
+    return events[:MAX_EVENTS_PER_CYCLE]
 
 
 def event_entity(ev: Event) -> tuple[str, str] | None:
