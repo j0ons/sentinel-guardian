@@ -48,13 +48,16 @@ baseline AND shows no attack signature. Your goal over time is to drive false al
 zero while NEVER missing a real threat — missing a threat is far worse than a false alarm."""
 
 
-# qwen3.7-max has a 1M-token context window. The whole point of Sentinel is to use it as
-# living working memory — reason over the deployment's FULL operational history, not a small
-# top-k slice. We budget by characters (~4 chars/token) and pull as much history as fits,
-# defaulting to a generous slice of context rather than an arbitrary 200-event cap.
-CONTEXT_TOKEN_BUDGET = int(os.getenv("SENTINEL_CONTEXT_TOKENS", "200000"))  # tokens of history
+# qwen3.7-max has a 1M-token context window. Sentinel uses it as living working memory, but
+# context size trades off against latency, so we budget it deliberately per use:
+#   * PER-DECISION: a modest recent window keeps each event's verdict fast (sub-few-seconds),
+#     which the edge loop and a live demo need. The baseline already distils older history.
+#   * CONSOLIDATION ("dreaming"): runs once/night where latency is irrelevant, so it exploits
+#     the FULL history in 1M context — that's where the big-context claim genuinely pays off.
 _CHARS_PER_TOKEN = 4
-MAX_HISTORY_EVENTS = int(os.getenv("SENTINEL_MAX_HISTORY_EVENTS", "5000"))  # hard upper bound
+DECISION_TOKEN_BUDGET = int(os.getenv("SENTINEL_DECISION_TOKENS", "8000"))     # fast per-event
+CONTEXT_TOKEN_BUDGET = int(os.getenv("SENTINEL_CONTEXT_TOKENS", "200000"))     # full, for dreaming
+MAX_HISTORY_EVENTS = int(os.getenv("SENTINEL_MAX_HISTORY_EVENTS", "5000"))     # hard upper bound
 
 
 class SentinelAgent:
@@ -63,20 +66,19 @@ class SentinelAgent:
         self.host = host
         self.last_context_stats: dict = {}     # exposed for the dashboard/demo
 
-    def _working_memory_block(self, max_events: int = MAX_HISTORY_EVENTS) -> str:
-        """Assemble the host's living memory for the 1M context window.
+    def _working_memory_block(self, max_events: int = MAX_HISTORY_EVENTS,
+                              token_budget: int = DECISION_TOKEN_BUDGET) -> str:
+        """Assemble the host's living memory. `token_budget` caps how much history is included:
+        small for fast per-event decisions, large (CONTEXT_TOKEN_BUDGET) for nightly dreaming.
 
-        Pulls the full operational history up to a token budget — this is the 1M-context claim
-        made real: at decision time the agent sees the deployment's whole timeline (or as much
-        of it as the budget allows), not a fixed small window. Records how much it used in
-        `last_context_stats` so the demo can show the context actually filling up over time."""
+        Records how much it used in `last_context_stats` so the demo can show context usage."""
         baseline = self.memory.current_baseline(self.host)
         version = self.memory.baseline_version(self.host)
         normals = self.memory.known_normal_entities()
         recent = self.memory.recent_events(limit=max_events)
 
         # Drop oldest events first if we'd blow the token budget (keep the most recent history).
-        char_budget = CONTEXT_TOKEN_BUDGET * _CHARS_PER_TOKEN
+        char_budget = token_budget * _CHARS_PER_TOKEN
         kept: list = []
         used = 0
         for e in reversed(recent):                 # newest first
@@ -90,7 +92,7 @@ class SentinelAgent:
             "events_in_context": len(kept),
             "events_available": self.memory.event_count(),
             "approx_tokens": used // _CHARS_PER_TOKEN,
-            "token_budget": CONTEXT_TOKEN_BUDGET,
+            "token_budget": token_budget,
         }
         recent = kept
 
