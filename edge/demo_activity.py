@@ -25,6 +25,22 @@ import requests
 
 CLOUD = os.getenv("SENTINEL_CLOUD", "http://127.0.0.1:8000").rstrip("/")
 HOST = os.getenv("SENTINEL_DEMO_HOST", "homelab-01")
+_TOKEN = os.getenv("SENTINEL_TOKEN", "").strip()
+_AUTH = {"Authorization": f"Bearer {_TOKEN}"} if _TOKEN else {}
+
+# The NOVEL kill-chain: three steps that are each individually unremarkable and use a port
+# (8443) that is NOT in the hardcoded threat list — so a signature/rule engine sees nothing.
+# Only an agent that CORRELATES them (unknown process -> new listener -> external egress)
+# catches it. This is the demo's whole point: detection a static ruleset structurally cannot do.
+KILLCHAIN = [
+    ("process", "new process started: dbus-daemon-helper (pid {pid})",
+     {"name": "dbus-daemon-helper"}, "proc:dbus-daemon-helper"),
+    ("listen", "new listening port 0.0.0.0:8443",
+     {"addr": "0.0.0.0:8443", "port": 8443}, "listen:0.0.0.0:8443"),
+    ("connection", "new outbound connection 203.0.113.66:8443 (ESTABLISHED)",
+     {"ip": "203.0.113.66", "port": 8443, "status": "ESTABLISHED", "external": True},
+     "outbound:8443:203.0.113.66"),
+]
 
 # Believable home/lab activity. (kind, summary, detail, entity_key)
 BENIGN = [
@@ -45,25 +61,42 @@ ATTACK = ("connection", "new outbound connection 185.220.101.5:4444 (ESTABLISHED
           "outbound:4444:185.220.101.5")
 
 
-def send(kind, summary, detail, entity_key, pid=None):
+def send(kind, summary, detail, entity_key, pid=None, show_trace=False):
     payload = {"kind": kind, "summary": summary.format(pid=pid or 0),
                "detail": detail, "host": HOST, "entity": [entity_key, kind]}
     try:
-        r = requests.post(f"{CLOUD}/event", json=payload, timeout=60)
+        r = requests.post(f"{CLOUD}/event", json=payload, headers=_AUTH, timeout=90)
         d = r.json()
         tag = {"mark_normal": "✓", "alert_user": "⚠", "actuate": "⛔"}.get(d.get("action"), "?")
         via = d.get("triage", "reason")
         print(f"  {tag} [{via:6}] {payload['summary'][:52]:52} -> {d.get('action')}")
+        if show_trace and d.get("investigation"):
+            for s in d["investigation"]:
+                print(f"        ↳ step {s['step']}: {s['tool']}({s.get('args')})")
+            print(f"        reason: {d.get('reason','')[:140]}")
+        return d
     except Exception as e:
         print(f"  ! failed: {e}")
+        return None
 
 
 def main():
     args = sys.argv[1:]
     print(f"demo_activity -> {CLOUD}  host={HOST}")
     if "--attack" in args:
-        print("\n>>> staging the reverse-shell moment:")
+        print("\n>>> staging the reverse-shell moment (known :4444 signature):")
         send(*ATTACK)
+        return
+    if "--killchain" in args:
+        print("\n>>> staging a NOVEL multi-step intrusion on port 8443 (NOT a known signature).")
+        print(">>> A rule engine sees three unrelated events. Watch Sentinel correlate them:\n")
+        pid = 4000
+        for i, step in enumerate(KILLCHAIN):
+            pid += 13
+            last = (i == len(KILLCHAIN) - 1)
+            print(f"  [{i+1}/3] {step[1].format(pid=pid)}")
+            send(*step, pid=pid, show_trace=last)   # show the agent's investigation on the final step
+            time.sleep(1)
         return
     burst = 0
     if "--burst" in args:

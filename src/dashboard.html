@@ -113,6 +113,13 @@
   .row.flash-in{background:rgba(31,200,220,.12)}
   @keyframes fadein{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
   .feed-empty{color:var(--dim);padding:22px 16px;font-family:var(--mono);font-size:12px}
+  /* ---- investigation trace ("watch the agent think") ---- */
+  .invHdr{margin:3px 0 2px 30px;color:#7dd3fc;font-size:11px;letter-spacing:.03em;opacity:.9}
+  .invStep{margin-left:30px;padding:1px 0;font-size:11.5px;opacity:0;animation:invIn .35s ease forwards;display:flex;gap:7px;align-items:center}
+  .invNum{display:inline-block;min-width:15px;height:15px;line-height:15px;text-align:center;border-radius:4px;background:rgba(125,211,252,.18);color:#7dd3fc;font-size:10px}
+  .invTool{color:#a5f3d0;font-weight:600}
+  .invArgs{color:var(--dim)}
+  @keyframes invIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
 
   /* ---- charts ---- */
   .chart-wrap{padding:12px 14px 14px}
@@ -286,6 +293,18 @@
              '<span class="tag">'+esc(tag)+'</span>'+
              '<span class="ev">'+esc(opts.text)+'</span></div>';
     if(opts.why) line+='<div class="why">'+esc(opts.why)+'</div>';
+    // Investigation trace: the agent's multi-step reasoning ("watch it think"). This is the
+    // differentiator — a stateless classifier has no trace to show.
+    if(opts.trace && opts.trace.length){
+      line+='<div class="invHdr">🔎 investigated '+opts.trace.length+' step'+(opts.trace.length>1?'s':'')+'</div>';
+      opts.trace.forEach(function(s,i){
+        var a=s.args?JSON.stringify(s.args):'';
+        line+='<div class="invStep" style="animation-delay:'+(i*0.18)+'s">'+
+              '<span class="invNum">'+s.step+'</span>'+
+              '<span class="invTool">'+esc(s.tool)+'</span>'+
+              '<span class="invArgs">'+esc(a.slice(0,60))+'</span></div>';
+      });
+    }
     div.innerHTML=line;
     feedEl.appendChild(div);
     // cap DOM nodes
@@ -301,7 +320,7 @@
       return;
     }
     addRow({ts:item.ts,cls:CLS[act]||"event",tag:TAG[act]||(act||"·").toUpperCase(),
-            text:item.event||"", why:item.reason||""});
+            text:item.event||"", why:item.reason||"", trace:item.investigation||[]});
   }
 
   function pumpFeed(){
