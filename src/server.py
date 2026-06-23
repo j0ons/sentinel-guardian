@@ -165,6 +165,8 @@ def api_overview():
         "edge_alive": bool(EDGE["last_contact"]) and (now - EDGE["last_contact"]) < EDGE_TIMEOUT,
         "edge_last_contact_s": (now - EDGE["last_contact"]) if EDGE["last_contact"] else None,
         "last_dream_ts": last_dream_ts,
+        # 1M-context working memory: how much history the agent reasoned over last decision.
+        "context": AGENT.last_context_stats,
     }
 
 

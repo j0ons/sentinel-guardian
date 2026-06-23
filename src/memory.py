@@ -134,6 +134,10 @@ class Memory:
         ).fetchall()
         return [self._row_to_event(r) for r in reversed(rows)]
 
+    def event_count(self) -> int:
+        """Total events on record — used to report how much history fits in the context."""
+        return self.db.execute("SELECT COUNT(*) c FROM events").fetchone()["c"]
+
     def current_baseline(self, host: str = "edge-0") -> str:
         row = self.db.execute(
             "SELECT model FROM baselines WHERE host=? ORDER BY version DESC LIMIT 1", (host,)
