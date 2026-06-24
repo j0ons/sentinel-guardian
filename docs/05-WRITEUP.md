@@ -93,6 +93,24 @@ a SOC. The consolidation + safety-floor pattern generalizes to **any** long-runn
 agent (infrastructure, IoT fleets, application logs): learn the environment's normal, keep
 getting sharper, never normalize an attack.
 
+## Why it beats a static rule engine (the impact, quantified)
+
+A signature/rule engine (Suricata/CrowdSec-style) can only match what it has a rule for, has no
+memory of *your* host, and cannot correlate events into a chain — so it faces an unwinnable
+trade-off. On the same 12-event stream (8 benign home/lab events + 2 threat incidents: a novel
+kill-chain on port 8443 with no signature, and a classic `:4444` reverse shell):
+
+| Detector | False alarms | Threats missed | Caught |
+|---|---|---|---|
+| Static rules — tight signatures | 0 | 1 | 1/2 — **misses the novel chain** |
+| Static rules — loose heuristics | 3 | 0 | 2/2 — **but false-positive storm** |
+| **Sentinel** (baseline + correlation) | **0** | **0** | **2/2** |
+
+Tight rules stay quiet but miss anything novel; loose rules catch more but storm false alarms
+on normal host activity. Sentinel wins both axes — it learned this host (so backups to odd
+internal ports are normal) **and** correlated the kill-chain (unknown process → new listener →
+external egress) that no single signature covers. Reproduce: `cd src && python compare_rules.py`.
+
 ## How it uses Alibaba Cloud / Qwen
 
 OpenAI SDK pointed at `https://dashscope-intl.aliyuncs.com/compatible-mode/v1`.
