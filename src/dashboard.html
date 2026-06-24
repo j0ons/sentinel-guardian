@@ -449,6 +449,8 @@
   try{ var qp=new URLSearchParams(location.search); if(qp.get("token")) window.__TOKEN=qp.get("token"); }catch(e){}
   var since = 0;            // feed cursor (epoch seconds)
   var seeded = false;       // have we backfilled history yet
+  var booted = false;       // true after the first seed+feed replay — gates posture reactions
+                            // so historical events never latch the spine on load
   var prevLive = null;      // detect the sim->live flip
   var lastOk = 0;           // last successful overview
   var feedEl = document.getElementById("feed");
@@ -519,7 +521,11 @@
     DECISIONS[key]=item;
     addRow({ts:item.ts,cls:CLS[act]||"event",tag:TAG[act]||(act||"·").toUpperCase(),
             text:item.event||"", why:item.reason||"", trace:item.investigation||[], key:key});
-    // drive the page's emotional state off the verdict
+    // Drive the page's emotional state ONLY off genuinely-live events (within ~45s of now).
+    // Backfilled history and the seed replay must NOT latch the posture (that's the bug where
+    // an old alert left the spine stuck on ELEVATED while the voice said "all quiet").
+    var fresh = booted && (Date.now()/1000 - item.ts) < 45;
+    if(!fresh) return;
     if(act==="actuate") onThreat(item);
     else if(act==="alert_user") onAlert(item);
   }
@@ -909,7 +915,10 @@
     });
     heartbeat(true); setInterval(function(){ heartbeat(true); }, 600);
 
-    seedHistory().then(function(){ seeded=true; return pumpFeed(); });
+    // Replay history with posture reactions OFF, then enable them ~1s later so only truly-live
+    // events drive the spine (fixes the stuck-ELEVATED-on-load bug).
+    seedHistory().then(function(){ seeded=true; return pumpFeed(); })
+      .then(function(){ setTimeout(function(){ booted=true; restPosture(); }, 1200); });
     pumpOverview(); pumpSeries(); pumpTimeline();
     setInterval(pumpFeed, 1500);
     setInterval(pumpOverview, 3000);
