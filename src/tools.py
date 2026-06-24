@@ -170,9 +170,12 @@ def _actuate_real(action: str, target: str, reason: str) -> dict:
                     "process group / init / every process)"}
         try:
             os.kill(pid, signal.SIGTERM)
-            return {"ok": True, "action": "kill_process", "target": pid, "armed": True}
+            # Keep the same keys the dry-run path emits (would/dry_run) so the dashboard
+            # kill-lock + drawer render identically whether SAFE or ARMED.
+            return {"ok": True, "action": "actuate", "dry_run": False,
+                    "would": f"kill_process {pid}", "target": pid, "armed": True, "reason": reason}
         except (ProcessLookupError, PermissionError) as e:
-            return {"ok": False, "error": str(e)}
+            return {"ok": False, "error": str(e), "dry_run": False, "would": f"kill_process {target}"}
     if action == "block_ip":
         # Validate as a real IP before any future nftables/iptables shell-out (never interpolate
         # an unvalidated string into a command). Currently records intent only.
@@ -181,6 +184,7 @@ def _actuate_real(action: str, target: str, reason: str) -> dict:
             ip = str(ipaddress.ip_address(target))
         except ValueError:
             return {"ok": False, "error": f"invalid ip {target!r}"}
-        return {"ok": True, "action": "block_ip", "target": ip, "armed": True,
-                "note": "would add nftables drop rule on Linux edge"}
+        return {"ok": True, "action": "actuate", "dry_run": False,
+                "would": f"block_ip {ip}", "target": ip, "armed": True,
+                "note": "would add nftables drop rule on Linux edge", "reason": reason}
     return {"ok": False, "error": f"unknown actuate action {action}"}
