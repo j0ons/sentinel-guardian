@@ -4,5 +4,8 @@ After=sentinel-cloud.service
 
 [Service]
 Type=oneshot
-# Trigger one consolidation pass on the local cloud brain.
-ExecStart=/usr/bin/curl -fsS -X POST http://127.0.0.1:8000/consolidate
+# /consolidate is bearer-gated (security floor). Read SENTINEL_TOKEN from the app's .env and
+# pass it, so the nightly self-improvement keeps working with auth enabled. If the token is
+# absent (auth disabled / dev), the empty header is harmless.
+EnvironmentFile=-/root/sentinel/.env
+ExecStart=/bin/sh -c '/usr/bin/curl -fsS -X POST -H "Authorization: Bearer $SENTINEL_TOKEN" http://127.0.0.1:8000/consolidate'
