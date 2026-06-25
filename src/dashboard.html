@@ -231,6 +231,24 @@
   .wm-sub{font-family:var(--mono);font-size:10.5px;color:var(--dim)}
   .wm-sub .pop{color:var(--cyan)}
 
+  /* ---- FLEET MIND panel ---- */
+  .fleet{margin-bottom:18px;padding-bottom:14px}
+  .fleet-nodes{display:flex;flex-wrap:wrap;gap:10px;padding:16px 16px 8px;position:relative}
+  .fnode{flex:0 0 auto;width:96px;text-align:center;position:relative;transition:.4s}
+  .fnode .ic{width:38px;height:38px;margin:0 auto;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    border:1px solid rgba(39,224,122,.4);background:rgba(39,224,122,.06);color:var(--green);font-size:17px;transition:.4s}
+  .fnode .nm{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fnode .ev{font-family:var(--mono);font-size:9px;color:var(--dim)}
+  .fnode.hit .ic{border-color:var(--red);background:rgba(255,77,106,.14);color:#ff8095;
+    box-shadow:0 0 16px rgba(255,77,106,.55);animation:alarm .9s ease-in-out infinite}
+  .fnode.hit .nm{color:#ff8095}
+  .fnode .step{position:absolute;top:-7px;right:14px;width:16px;height:16px;border-radius:50%;
+    background:var(--red);color:#fff;font:700 10px var(--mono);display:none;align-items:center;justify-content:center;box-shadow:0 0 8px var(--red)}
+  .fnode.hit .step{display:flex}
+  .fleet-verdict{padding:6px 16px 0;font-family:var(--mono);font-size:12px;color:var(--mut)}
+  .fleet-verdict.alarm{color:#ff8095}
+  .fleet.campaign{border-color:var(--red);box-shadow:0 0 30px -16px var(--red)}
+
   /* ---- HERO kill-lock overlay ---- */
   .killlock{position:fixed;inset:0;z-index:60;pointer-events:none;display:none;align-items:center;justify-content:center}
   .killlock.fire{display:flex;animation:klflash 1.6s ease-out forwards}
@@ -363,6 +381,14 @@
       <span class="wm-cap">1,000,000-token context</span></div>
     <div class="wm-bar"><span class="wm-fill" id="wmFill"></span><span class="wm-ceil"></span></div>
     <div class="wm-sub" id="wmSub">cold start</div>
+  </div>
+
+  <!-- FLEET MIND: the whole fleet on one wall — cross-host campaign detection (the winning bet) -->
+  <div class="fleet frame" id="fleetBox">
+    <div class="phead"><h2>Fleet mind · one mind over every host</h2>
+      <span class="meta" id="fleetMeta">— hosts</span></div>
+    <div class="fleet-nodes" id="fleetNodes"></div>
+    <div class="fleet-verdict" id="fleetVerdict">all hosts clear — no cross-host campaign</div>
   </div>
 
   <div class="grid">
@@ -784,6 +810,36 @@
     }).catch(function(){});
   }
 
+  // ---------- FLEET MIND panel ----------
+  function pumpFleet(){
+    return fetch("api/fleet",{cache:"no-store"}).then(r=>r.json()).then(function(d){
+      var hosts=d.hosts||[]; $("fleetMeta").textContent=(d.host_count||0)+" hosts";
+      var camp=d.campaign||{}; var chain=camp.chain||[];
+      // map host -> step index in the chain (chain entries look like "web-01:ssh login…")
+      var hitHost={}; chain.forEach(function(c,i){ var h=String(c).split(":")[0].trim(); hitHost[h]=i+1; });
+      var box=$("fleetBox"), vEl=$("fleetVerdict");
+      var detected=camp.verdict==="CAMPAIGN_DETECTED";
+      box.classList.toggle("campaign",detected);
+      var el=$("fleetNodes"); el.innerHTML="";
+      hosts.forEach(function(h){
+        var step=hitHost[h.host];
+        var d2=document.createElement("div"); d2.className="fnode"+(step?" hit":"");
+        d2.innerHTML='<div class="step">'+(step||"")+'</div>'+
+          '<div class="ic">'+(step?"⛔":"🛡")+'</div>'+
+          '<div class="nm">'+esc(h.host)+'</div>'+
+          '<div class="ev">'+(h.events||0)+' ev</div>';
+        el.appendChild(d2);
+      });
+      if(detected){
+        vEl.className="fleet-verdict alarm";
+        vEl.textContent="⛔ CROSS-HOST CAMPAIGN: "+chain.join("  →  ");
+      } else {
+        vEl.className="fleet-verdict";
+        vEl.textContent=hosts.length?"all hosts clear — no cross-host campaign":"no hosts reporting yet";
+      }
+    }).catch(function(){});
+  }
+
   // ---------- voice (first-person) ----------
   var lastOverview=null, lastThreat=null;
   function refreshVoice(){
@@ -919,11 +975,12 @@
     // events drive the spine (fixes the stuck-ELEVATED-on-load bug).
     seedHistory().then(function(){ seeded=true; return pumpFeed(); })
       .then(function(){ setTimeout(function(){ booted=true; restPosture(); }, 1200); });
-    pumpOverview(); pumpSeries(); pumpTimeline();
+    pumpOverview(); pumpSeries(); pumpTimeline(); pumpFleet();
     setInterval(pumpFeed, 1500);
     setInterval(pumpOverview, 3000);
     setInterval(pumpSeries, 12000);
     setInterval(pumpTimeline, 30000);
+    setInterval(pumpFleet, 4000);
     window.addEventListener("resize", function(){ pumpSeries(); });
   }
   boot();
