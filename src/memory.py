@@ -87,11 +87,14 @@ class Memory:
         self.db.commit()
 
     # --- write paths --------------------------------------------------------
-    def record_event(self, ev: Event) -> int:
-        vec = embed([ev.to_text()])[0]
+    def record_event(self, ev: Event, *, embed_now: bool = True) -> int:
+        # embed_now=False skips the embedding API call — for bulk staging/replay where vector
+        # recall isn't needed (e.g. seeding a fleet timeline). Avoids one API call per event.
+        vec = embed([ev.to_text()])[0] if embed_now else None
         cur = self.db.execute(
             "INSERT INTO events (ts,kind,summary,detail,host,embedding) VALUES (?,?,?,?,?,?)",
-            (ev.ts, ev.kind, ev.summary, json.dumps(ev.detail), ev.host, json.dumps(vec)),
+            (ev.ts, ev.kind, ev.summary, json.dumps(ev.detail), ev.host,
+             json.dumps(vec) if vec is not None else None),
         )
         self.db.commit()
         self._archive({"type": "event", **asdict(ev)})
