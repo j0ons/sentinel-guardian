@@ -124,6 +124,46 @@ def feed(since: float = 0.0):
     return {"now": time.time(), "items": [r for r in FEED if r["ts"] > since]}
 
 
+# --- FLEET MIND: cross-host view + the latest campaign verdict (the winning-bet panel) --------
+FLEET_CAMPAIGN = {"verdict": "CLEAR", "report": "", "chain": [], "ts": 0.0}  # cached, set by /api/fleet/scan
+
+
+@app.get("/api/fleet")
+def api_fleet():
+    """Per-host status across the fleet + the latest cross-host campaign verdict. Cheap (no LLM):
+    the dashboard polls this; the expensive fleet reasoning runs on /api/fleet/scan."""
+    now = time.time()
+    rows = MEMORY.db.execute(
+        "SELECT host, COUNT(*) c, MAX(ts) last FROM events GROUP BY host ORDER BY host").fetchall()
+    hosts = [{"host": r["host"], "events": r["c"],
+              "last_age_s": (now - r["last"]) if r["last"] else None} for r in rows]
+    return {"now": now, "host_count": len(hosts), "hosts": hosts, "campaign": FLEET_CAMPAIGN}
+
+
+@app.post("/api/fleet/scan")
+def api_fleet_scan(_auth: None = Depends(require_token)):
+    """Run the Fleet Mind once over the whole fleet timeline and cache the verdict. Bearer-gated
+    (it costs an LLM call). The dashboard then shows the result via /api/fleet."""
+    from fleet_mind import run_fleet_mind
+    with LOCK:
+        out = run_fleet_mind(MEMORY)
+    chain = []
+    for line in (out.get("report") or "").splitlines():
+        if line.upper().startswith("CHAIN:"):
+            chain = [s.strip() for s in line.split(":", 1)[1].split("->") if s.strip()]
+    FLEET_CAMPAIGN.update(verdict=out["verdict"], report=out.get("report", ""),
+                          chain=chain, ts=time.time(),
+                          hosts=out.get("hosts", []))
+    if out["verdict"] == "CAMPAIGN_DETECTED":
+        FEED.append({"ts": time.time(), "event": "*** FLEET CAMPAIGN DETECTED ***",
+                     "action": "actuate", "reason": out.get("report", "")[:300],
+                     "result": {"would": "quarantine fleet hosts", "dry_run": not _tools.ARMED},
+                     "investigation": [{"step": 1, "tool": "fleet_mind",
+                                        "args": {"hosts": len(out.get("hosts", []))},
+                                        "observation": {"chain": chain}}]})
+    return FLEET_CAMPAIGN
+
+
 # --- Operator agency: posture (arm/disarm), entity drilldown, decision verdict ---------------
 import tools as _tools
 
