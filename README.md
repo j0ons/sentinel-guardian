@@ -1,26 +1,45 @@
 # Sentinel
 
-A self-improving autonomous edge guardian. A Raspberry Pi watches a space; a long-horizon
-Qwen3.7-max agent in the cloud perceives, reasons, acts, remembers — and **gets measurably
-smarter every night** by consolidating its memory and rewriting its model of "what's normal here."
+A self-improving autonomous edge guardian — and a **fleet mind** that catches attacks no
+single host, no rule engine, and no retrieval system can see. A long-horizon Qwen3.7-max agent
+watches a fleet of hosts, investigates multi-step, acts on the edge, and **gets measurably
+smarter every night** by consolidating its memory — while auditing its own learning so it can
+never be slowly trained to stand down.
 
 Built for the **Global AI Hackathon Series with Qwen Cloud** (Track 4: Autopilot Agent).
-Personal project · solo build · 30 days.
+Personal project · solo build.
 
-> Most agents forget. Sentinel sleeps on it and wakes up sharper.
+> Most agents forget. Sentinel sleeps on it and wakes up sharper — but never forgets to be paranoid.
 
-## The idea in one diagram
+## The headline: a cross-host APT only the full haystack reveals
 
-Edge (Pi) perceives cheaply → Cloud (Qwen3.7-max) reasons over the **full deployment history
-in 1M context** → acts on the edge → records to 3-tier memory → a nightly **consolidation pass**
-("dreaming") rewrites the behavioral baseline so false alarms trend to zero.
+One Qwen agent holds an **entire fleet's lifetime in one large context** and catches a slow,
+lateral campaign whose individual steps are each benign on their own host:
 
-See `docs/01-ARCHITECTURE.md`.
+```
+web-01: new ssh source → db-02: pg_dumpall → ci-03: new :8443 listener → nas-04: external egress
+```
+
+Each event is correctly `normal` per-host. Only by reasoning over **every host's full timeline
+at once** does the campaign appear — and we prove it: the *same* data through a 128k window or
+top-k RAG returns CLEAN, because the signal lives in the joint distribution of the whole
+haystack. Reproduce in one command: `python src/compare_context.py`.
+
+## What it does, that others can't
+
+- **Fleet Mind** (`src/fleet_mind.py`) — cross-host APT correlation in one 1M-context pass.
+- **Memory-grounded judgment** — the same event flips *alert → normal* once the host is learned.
+- **Boiling-frog meta-defense** (`src/boiling_frog.py`) — a frozen reference baseline audits the
+  nightly dream, so a low-and-slow attacker can't train Sentinel to normalize an intrusion.
+- **Deterministic safety floor** — attack signatures are *always* caught, no matter the baseline.
+- **Benchmarked** (`src/benchmark.py`): 100% recall / 0% false-alarm / 0 missed across 42
+  scenarios vs static rules that miss novel attacks or storm false alarms. See `docs/benchmark.png`.
 
 ## Why Qwen Cloud
 
-- **1M-token context** holds the entire operational log as living working memory (not top-k retrieval).
-- **Long-horizon tool-calling** for perpetual perceive→act autonomy.
+- **Large native context** holds an entire fleet's operational history as one living working
+  memory — the Fleet Mind and nightly dream are *impossible* without it (proven, not asserted).
+- **Long-horizon, multi-step investigation** — the agent gathers evidence across tools before acting.
 - **Nightly consolidation** with qwen3.7-max — the self-improvement loop and the novel core.
 
 ## A physical edge device

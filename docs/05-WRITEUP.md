@@ -14,20 +14,37 @@ version at the bottom if a field has a tight character limit.*
 
 **Most agents forget. Sentinel sleeps on it and wakes up sharper — but never forgets to be paranoid.**
 
-A self-improving edge security guardian: a cheap always-on device watches a host's process,
-network, and login activity; a long-horizon **qwen3.7-max** agent in the cloud reasons over
-the *entire* operational history in 1M context, acts on the edge, and every night
-**consolidates its memory** — rewriting its model of "what's normal on this host" so its
-judgment keeps improving. A deterministic safety floor guarantees attack signatures are never
-normalized away.
+A self-improving edge security guardian — and a **fleet mind**. A long-horizon **qwen3.7-max**
+agent watches a fleet of hosts; per host it learns "what's normal here" and investigates
+multi-step; across the fleet it holds **every host's full timeline in one large context** and
+catches a slow lateral campaign no single host, rule engine, or retriever can see. It audits
+its own nightly learning so it can never be trained to stand down, and a deterministic safety
+floor guarantees attack signatures are never normalized away.
 
 ## The problem
 
-Security and monitoring agents are stateless. They judge each event with no memory of *your*
-specific machine, so they either cry wolf at routine activity or need humans to hand-write
-rules forever. Bolting a vector DB onto a chatbot gives you top-k retrieval — fuzzy snippets,
-not a coherent, evolving model of a host. Nobody's home/lab/SMB server gets a guardian that
-actually *learns the place*.
+Security agents are stateless and per-host. They judge each event with no memory of *your*
+machine (so they cry wolf or need rules hand-written forever), and they see one host at a time
+— so a patient attacker who moves **laterally**, one benign-looking step per host over days,
+is invisible to every per-host detector. Bolting a vector DB onto a chatbot doesn't fix it:
+top-k retrieval surfaces individually-relevant snippets, but a lateral campaign has **no single
+relevant event** — the signal exists only in the joint distribution of the whole fleet's
+history. That is exactly what a large context window, and nothing else, can hold.
+
+## The headline result (reproducible)
+
+A fleet of hosts; a hidden 4-step APT — `web-01: new ssh source → db-02: pg_dumpall →
+ci-03: new :8443 listener → nas-04: external egress`. Each event is correctly `normal` on its
+own host. The **same** fleet timeline, three detectors:
+
+| Detector | Catches the cross-host APT? |
+|---|---|
+| **Sentinel @ full fleet context** (qwen3.7-max) | **YES** |
+| Sentinel @ 128k window (only recent events fit) | no — the early steps fall off the back |
+| top-k RAG over the event store | no — surfaced only 1 of 4 needles |
+
+Verified live, 5/5 runs; CLEAR on a clean fleet (no false positive). Reproduce:
+`python src/fleet_mind.py --demo` and `python src/compare_context.py`.
 
 ## What Sentinel does (and why it needs Qwen)
 
