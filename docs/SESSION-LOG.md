@@ -113,7 +113,7 @@ The QwenCloud hackathon voucher arrived; this session unblocked the API and ship
 
 ### The voucher — what it actually is
 - Screenshot from Alibaba Cloud billing console showed: **$40 USD Cash Coupon**,
-  Coupon No. **501018440370659**, Balance 40 USD, type "General Use (Exclusions Apply)",
+  Coupon No. **<redacted>**, Balance 40 USD, type "General Use (Exclusions Apply)",
   owner `mohamed.shanan9@gmail.com`.
 - **Key realization:** the coupon is NOT an API key. It is account credit that
   auto-applies to pay-as-you-go bills at billing time (confirmed via Alibaba help docs).
