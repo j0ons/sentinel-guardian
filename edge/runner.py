@@ -111,10 +111,57 @@ def apply_action(decision: dict):
 
     if action == "actuate":
         gpio.threat()                          # red LED solid + buzzer pulse
+        _local_kill(decision)                  # the Live Kill: terminate the malicious PID locally
     elif action == "alert_user":
         gpio.alert()                           # amber LED blink
     else:
         gpio.heartbeat_ok()                    # brief green tick — system alive & calm
+
+
+def _local_kill(decision: dict):
+    """THE LIVE KILL — when armed, terminate the offending local process on THIS host. The
+    cloud reasons; the kill lands where the malicious process actually runs. Armed-only and
+    PID-validated (never signal a group/init). Set SENTINEL_ARMED=1 on the edge to enable."""
+    if os.getenv("SENTINEL_ARMED", "0") != "1":
+        would = (decision.get("result") or {}).get("would", "")
+        print(f"  [ACT!] SAFE/dry-run — would: {would or 'kill the offending process'}", flush=True)
+        return
+    # find the malicious pid: prefer the decision's result target, else the killchain process
+    result = decision.get("result") or {}
+    target = result.get("target")
+    pid = None
+    try:
+        pid = int(target)
+    except (TypeError, ValueError):
+        pid = _find_attacker_pid()             # fall back to locating the backdoor by name/port
+    if not pid or pid <= 1:
+        print(f"  [ACT!] no valid local PID to kill (target={target!r})", flush=True)
+        return
+    try:
+        import signal
+        os.kill(pid, signal.SIGTERM)
+        print(f"  [ACT!] ⛔ KILLED malicious process PID {pid} — threat neutralized on the host",
+              flush=True)
+    except (ProcessLookupError, PermissionError) as e:
+        print(f"  [ACT!] kill PID {pid} failed: {e}", flush=True)
+
+
+def _find_attacker_pid():
+    """Locate the backdoor process (the attacker.py / a listener on the chain port) by scanning
+    psutil — used when the decision didn't carry an explicit PID."""
+    try:
+        import psutil
+    except Exception:
+        return None
+    port = int(os.getenv("ATTACKER_PORT", "8443"))
+    for p in psutil.process_iter(["pid", "name", "cmdline"]):
+        try:
+            cl = " ".join(p.info.get("cmdline") or [])
+            if "attacker.py" in cl or f":{port}" in cl:
+                return p.info["pid"]
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return None
 
 
 def main():
