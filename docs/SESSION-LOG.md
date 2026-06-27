@@ -65,7 +65,7 @@ Free qwen3.7-max quota ran out mid-session → now on pay-as-you-go from the $40
 1. Proxmox host's **Tailscale node drifted offline** (daemon up, control heartbeat stale) →
    dashboard unreachable. Fix: clean `systemctl restart tailscaled`. (My `tailscale up
    --reset` attempt briefly knocked it fully off-tailnet + dropped SSH — mistake; don't use
-   --reset. Recurrence one-liner: `ssh root@100.114.4.79 systemctl restart tailscaled`.)
+   --reset. Recurrence one-liner: `ssh root@YOUR_PVE_HOST systemctl restart tailscaled`.)
 2. **Self-inflicted "CLOUD OFFLINE"**: watchdog restarted the brain if `/health` didn't
    answer in 8s, but today's slower reasoning (9-30s, holding the global LOCK + saturating
    the sync threadpool) blocked /health → watchdog kept KILLING the busy brain. Fix:
@@ -156,12 +156,12 @@ The QwenCloud hackathon voucher arrived; this session unblocked the API and ship
    deployment is Proxmox/Tailscale. Killed it.)
 
 ### Proxmox / Tailscale — the real deployment
-- Proxmox host: **`100.114.4.79`** (tailnet), root password **`root@123`**.
+- Proxmox host: **`YOUR_PVE_HOST`** (tailnet), root password **`YOUR_PVE_PASSWORD`**.
   ⚠️ SSH needs password-only: `-o PreferredAuthentications=password -o PubkeyAuthentication=no`
   (otherwise pubkey attempts exhaust and it returns "Permission denied").
 - Containers: CT201 `sentinel-cloud` (brain, `10.10.10.201:8000`), CT202 `sentinel-edge`,
   plus CT102 + CT104 pihole. Edge heartbeats CT201 via `/api/edge/ping`.
-- `tailscale serve` on host already published: **`https://proxmox.tail7b566b.ts.net:8443`
+- `tailscale serve` on host already published: **`https://proxmox.YOUR-TAILNET.ts.net:8443`
   → `http://10.10.10.201:8000`** (tailnet-only, not public Funnel). Also `/` and `/shell`
   on 443 (the existing Command Deck — untouched).
 - Dashboard code was ALREADY deployed on CT201 (`GET /` and `/api/overview` → 200), but
@@ -185,11 +185,11 @@ had `Environment=SENTINEL_SIM=1`.
 | Brain `sentinel-cloud` | CT201 `10.10.10.201:8000` | **live-qwen3.7-max**, baseline v10 |
 | Edge `sentinel-edge` | CT202 (`10.10.10.202`) | heartbeating CT201 |
 | Dashboard | served by CT201 `/` | HTTP 200, polling |
-| Tailscale serve | host `100.114.4.79` :8443 → CT201:8000 | live, tailnet-only |
+| Tailscale serve | host `YOUR_PVE_HOST` :8443 → CT201:8000 | live, tailnet-only |
 | Qwen key | CT201 `.env` + Mac repo `.env` | live, intl endpoint |
 | Mac repo | commit `7f5ef98` | dashboard committed |
 
-**WATCH URL: https://proxmox.tail7b566b.ts.net:8443/** — banner flips amber→green
+**WATCH URL: https://proxmox.YOUR-TAILNET.ts.net:8443/** — banner flips amber→green
 "LIVE · qwen3.7-max" on next poll.
 
 ### Open items / next session
@@ -213,7 +213,7 @@ cd ~/Desktop/sentinel-hackathon && ./scripts/demo-replay.sh 6
 # Local live replay
 cd src && SENTINEL_SIM=0 python replay.py 3
 # SSH to Proxmox (password-only!)
-SSHPASS='root@123' sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no root@100.114.4.79
+SSHPASS='YOUR_PVE_PASSWORD' sshpass -e ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no root@YOUR_PVE_HOST
 # CT201 health
 ... 'curl -s http://10.10.10.201:8000/health'   # expect mode: live-qwen3.7-max
 ```

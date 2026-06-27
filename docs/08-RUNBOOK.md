@@ -7,7 +7,7 @@ The exact sequence to film the <3-min video. The system is FROZEN and verified d
 
 1. **Open the dashboard** (with the operator token so the ARM switch + verdict buttons work):
    ```
-   https://proxmox.tail7b566b.ts.net:8443/?token=<SENTINEL_TOKEN>
+   https://proxmox.YOUR-TAILNET.ts.net:8443/?token=<SENTINEL_TOKEN>
    ```
    Token is in `/tmp/sentinel_token.txt` on your Mac. Without `?token=` the page still works
    for viewing, but Arm/verdict actions no-op with a toast.
@@ -20,7 +20,7 @@ The exact sequence to film the <3-min video. The system is FROZEN and verified d
 3. **Two terminals ready** on your Mac, each with the token exported:
    ```
    export TOK=$(cat /tmp/sentinel_token.txt)
-   export PVE=root@100.114.4.79          # password: root@123
+   export PVE=root@YOUR_PVE_HOST          # password: YOUR_PVE_PASSWORD
    ```
 
 ## The shot sequence (≈2:45)

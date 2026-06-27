@@ -3,7 +3,7 @@
 # redeploy.sh — push latest code + systemd units to the Proxmox CTs.
 # RUN FROM YOUR MAC (needs sshpass). Re-runnable any time you change code.
 #
-#   PVE_HOST=100.114.4.79 PVE_PASS=root@123 ./deploy/redeploy.sh
+#   PVE_HOST=YOUR_PVE_HOST PVE_PASS=YOUR_PVE_PASSWORD ./deploy/redeploy.sh
 #
 # CT201 sentinel-cloud (10.10.10.201) = brain + nightly dream timer
 # CT202 sentinel-edge  (10.10.10.202) = edge collector
@@ -11,8 +11,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-PVE_HOST="${PVE_HOST:-100.114.4.79}"
-PVE_PASS="${PVE_PASS:-root@123}"
+PVE_HOST="${PVE_HOST:-YOUR_PVE_HOST}"
+PVE_PASS="${PVE_PASS:-YOUR_PVE_PASSWORD}"
 CLOUD_ID=201
 EDGE_ID=202
 

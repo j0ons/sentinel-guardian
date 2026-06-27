@@ -16,10 +16,10 @@ for the moment the credits land.
 
 ```bash
 # 1. (re)deploy so dashboard.html + the new endpoints are on CT201
-PVE_HOST=100.114.4.79 PVE_PASS=root@123 ./deploy/redeploy.sh
+PVE_HOST=YOUR_PVE_HOST PVE_PASS=YOUR_PVE_PASSWORD ./deploy/redeploy.sh
 
 # 2. publish it on your tailnet (one-time; additive, does NOT touch the Command Deck on 443)
-PVE_HOST=100.114.4.79 PVE_PASS=root@123 ./deploy/serve-dashboard.sh
+PVE_HOST=YOUR_PVE_HOST PVE_PASS=YOUR_PVE_PASSWORD ./deploy/serve-dashboard.sh
 #    -> prints:  https://proxmox.<tailnet>.ts.net:8443/
 
 # 3. open + smoke-test from your Mac
@@ -33,21 +33,21 @@ No app rebuild needed when you flip to live — the banner flips itself on the n
 
 ```bash
 # 1. put your real key into the cloud container's .env
-SSHPASS='root@123' sshpass -e ssh root@100.114.4.79 \
+SSHPASS='YOUR_PVE_PASSWORD' sshpass -e ssh root@YOUR_PVE_HOST \
   "pct exec 201 -- bash -c 'echo QWEN_API_KEY=sk-YOUR-REAL-KEY > /root/sentinel/.env'"
 
 # 2. switch the service out of SIM mode
-SSHPASS='root@123' sshpass -e ssh root@100.114.4.79 \
+SSHPASS='YOUR_PVE_PASSWORD' sshpass -e ssh root@YOUR_PVE_HOST \
   "pct exec 201 -- sed -i 's/SENTINEL_SIM=1/SENTINEL_SIM=0/' /etc/systemd/system/sentinel-cloud.service"
 
 # 3. reload + restart
-SSHPASS='root@123' sshpass -e ssh root@100.114.4.79 \
+SSHPASS='YOUR_PVE_PASSWORD' sshpass -e ssh root@YOUR_PVE_HOST \
   "pct exec 201 -- bash -c 'systemctl daemon-reload && systemctl restart sentinel-cloud'"
 ```
 
 ## Confirm it's live
 ```bash
-SSHPASS='root@123' sshpass -e ssh root@100.114.4.79 \
+SSHPASS='YOUR_PVE_PASSWORD' sshpass -e ssh root@YOUR_PVE_HOST \
   "pct exec 201 -- curl -s http://127.0.0.1:8000/health"
 # expect:  "mode":"live-qwen3.7-max"
 ```

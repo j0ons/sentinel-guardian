@@ -39,7 +39,7 @@ the **safety floor** (attack signatures always win) holds. This is the whole pit
 
 ### Production tips
 - Record `demo_recall.py` running live FIRST — it's the riskiest, highest-value asset.
-- Show the dashboard (`https://proxmox.tail7b566b.ts.net:8443/`) for the live/ambient shots.
+- Show the dashboard (`https://proxmox.YOUR-TAILNET.ts.net:8443/`) for the live/ambient shots.
 - Read the model's WARM reason verbatim on camera — "the restic backup utility" lands hard.
 - Hard-cap under 3:00. Judges watch hundreds.
 

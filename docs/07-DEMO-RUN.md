@@ -3,7 +3,7 @@
 Exact commands to make the live dashboard come alive for the video. The system is real;
 this just gives a quiet host something to guard so decisions stream on camera.
 
-Dashboard: **https://proxmox.tail7b566b.ts.net:8443/**
+Dashboard: **https://proxmox.YOUR-TAILNET.ts.net:8443/**
 
 ## Why the dashboard looks quiet normally
 

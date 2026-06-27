@@ -4,7 +4,7 @@
 # RUN FROM YOUR MAC (needs sshpass). One-time; the mapping persists in
 # tailscaled.state and survives reboots.
 #
-#   PVE_HOST=100.114.4.79 PVE_PASS=root@123 ./deploy/serve-dashboard.sh
+#   PVE_HOST=YOUR_PVE_HOST PVE_PASS=YOUR_PVE_PASSWORD ./deploy/serve-dashboard.sh
 #
 # What it does: tells the Proxmox host's Tailscale to publish
 #     https://<host>.<tailnet>.ts.net:8443/   ->   http://10.10.10.201:8000  (CT201, the brain)
@@ -15,8 +15,8 @@
 # =====================================================================
 set -euo pipefail
 
-PVE_HOST="${PVE_HOST:-100.114.4.79}"
-PVE_PASS="${PVE_PASS:-root@123}"
+PVE_HOST="${PVE_HOST:-YOUR_PVE_HOST}"
+PVE_PASS="${PVE_PASS:-YOUR_PVE_PASSWORD}"
 CLOUD_IP="${CLOUD_IP:-10.10.10.201}"   # CT201 sentinel-cloud on vmbr1
 PORT="${PORT:-8443}"
 
