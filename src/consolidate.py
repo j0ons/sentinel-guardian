@@ -107,8 +107,18 @@ def consolidate(memory: Memory, host: str = "edge-0",
     )
     new_baseline = resp.get("text", "").strip()
 
+    # If we're LIVE but the call failed (network blip → empty text + an error), do NOT overwrite a
+    # good baseline with a stub or bump the version — keep the previous baseline and report the
+    # failure so the next night retries cleanly. (A transient outage shouldn't poison the model.)
+    if is_live() and not new_baseline:
+        return {"version": prev_version, "promoted": 0,
+                "baseline_preview": prev_baseline[:160], "live": True,
+                "error": resp.get("error") or "live consolidation returned empty; baseline kept",
+                "skipped": True, "context_events": len(ev_lines),
+                "context_tokens": consolidation_context_tokens}
+
     if not new_baseline or not is_live():
-        # STUB / empty: synthesize a deterministic baseline so the loop is testable offline.
+        # STUB / empty: synthesize a deterministic baseline so the loop is testable OFFLINE (SIM).
         frequent = [r["name"] for r in entities
                     if r["seen_count"] >= promote_after and not _is_threat_entity(r["name"])]
         new_baseline = (
