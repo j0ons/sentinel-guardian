@@ -1,7 +1,7 @@
 # Sentinel — Submission Write-up
 
 > **Track 4 — Autopilot Agent** · Global AI Hackathon Series with Qwen Cloud · solo build, 30 days
-> Repo: <ADD PUBLIC GITHUB URL> · Demo video: <ADD YOUTUBE URL>
+> Repo: https://github.com/j0ons/sentinel-guardian · Demo video: <ADD YOUTUBE URL>
 > Proof of Alibaba Cloud deployment: [`src/qwen_client.py`](../src/qwen_client.py) — wraps the
 > `dashscope-intl` OpenAI-compatible endpoint, models `qwen3.7-max` / `qwen3.6-flash`.
 
