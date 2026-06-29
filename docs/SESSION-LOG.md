@@ -122,7 +122,7 @@ The QwenCloud hackathon voucher arrived; this session unblocked the API and ship
   `billing-cost.console.alibabacloud.com/coupons/coupon`, and the how-to-use-coupons help page.
 
 ### The blocker (and the diagnosis trail)
-1. First key tried: `sk-ws-H.RPPLEEI...` created in Alibaba **Model Studio, China (Beijing)**
+1. First key tried: `sk-ws-<REDACTED>` created in Alibaba **Model Studio, China (Beijing)**
    region. Placed in `.env`. Test against intl endpoint → **401 invalid_api_key**.
 2. Key is **region-bound**. Beijing key 401s on `dashscope-intl.aliyuncs.com`.
 3. Tried Beijing endpoint (`dashscope.aliyuncs.com/compatible-mode/v1`) → auth PASSED but
@@ -136,7 +136,7 @@ The QwenCloud hackathon voucher arrived; this session unblocked the API and ship
 ### The unlock
 - Org-provided **Qwen Cloud portal** (`home.qwencloud.com`) issues its OWN API key,
   independent of the Alibaba console / identity verification.
-- Second key from Qwen portal: `sk-ws-H.IXMMHR.uAL8...`
+- Second key from Qwen portal: `sk-ws-<REDACTED>`
 - Tested → **✅ works on the INTL endpoint** (`dashscope-intl.aliyuncs.com/compatible-mode/v1`):
   `qwen3.7-max`, `qwen3.6-flash`, `qwen-max`, `qwen-turbo` all return `OK`.
   (401s on Beijing endpoint — it's an intl key, which matches the code's default base_url.)
@@ -193,7 +193,7 @@ had `Environment=SENTINEL_SIM=1`.
 "LIVE · qwen3.7-max" on next poll.
 
 ### Open items / next session
-1. **🔴 ROTATE KEYS** — two `sk-ws-...` keys were pasted into the chat (the live Qwen one
+1. **🔴 ROTATE KEYS** — two `sk-ws-<REDACTED>` keys were pasted into the chat (the live Qwen one
    + the dead Beijing one). Rotate the live one in the Qwen portal, then re-push to BOTH
    Mac `.env` and CT201 (`/root/sentinel/.env` + `src/.env`) and restart sentinel-cloud.
 2. **Redeploy to be safe** — CT201 already serves a working dashboard, but run
