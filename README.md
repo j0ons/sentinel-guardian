@@ -25,20 +25,34 @@ at once** does the campaign appear — and we prove it: the *same* data through 
 top-k RAG returns CLEAN, because the signal lives in the joint distribution of the whole
 haystack. Reproduce in one command: `python src/compare_context.py`.
 
-## What it does, that others can't
+## What it does, that others can't — proven on the live model
 
-- **Fleet Mind** (`src/fleet_mind.py`) — cross-host APT correlation in one 1M-context pass.
-- **Memory-grounded judgment** — the same event flips *alert → normal* once the host is learned.
+Everything below is measured against the **real qwen3.7-max** agent (re-run it yourself):
+
+- **Fleet Mind** (`src/fleet_mind.py`) — one real qwen3.7-max call correlates a cross-host APT
+  across an entire fleet's timeline. Verified live 5/5; CLEAR on a clean fleet.
+- **Real-model benchmark** (`src/benchmark_live.py`) — the *actual* agent, scored live:
+  **100% recall / 0% false-alarm / 0 missed** over reverse-shell, bind-shell, novel non-signature
+  egress, crypto-miner, external-root-login, and C2 scenarios. Every verdict is a Qwen decision.
+- **Memory-grounded judgment** (`src/demo_recall.py`) — the same event flips *alert → normal*
+  once the host is learned; qwen3.7-max recalls it as the restic backup. A stateless model can't.
 - **Boiling-frog meta-defense** (`src/boiling_frog.py`) — a frozen reference baseline audits the
   nightly dream, so a low-and-slow attacker can't train Sentinel to normalize an intrusion.
-- **Deterministic safety floor** — attack signatures are *always* caught, no matter the baseline.
-- **Benchmarked** (`src/benchmark.py`): 100% recall / 0% false-alarm / 0 missed across 42
-  scenarios vs static rules that miss novel attacks or storm false alarms. See `docs/benchmark.png`.
+- **Deterministic safety floor** (`src/safety.py`) — attack signatures are *always* caught.
+
+> Two helper scripts illustrate the *logic* deterministically (no Qwen call) so anyone can
+> reason about it offline: `src/compare_context.py` (why full context beats a 128k window and
+> RAG on a cross-host APT) and `src/benchmark.py` (the detection rules vs static-rule baselines).
+> These are models of the logic; the **live** proofs above are the measurements of the real agent.
+
+**Proof it runs on Qwen Cloud:** `src/verify_qwen.py` (and the captured `docs/proof-of-qwen.txt`)
+— the dashscope-intl server echoes back `model=qwen3.7-max` and the model self-identifies as
+"Qwen, developed by Alibaba Group's Tongyi Lab."
 
 ## Why Qwen Cloud
 
 - **Large native context** holds an entire fleet's operational history as one living working
-  memory — the Fleet Mind and nightly dream are *impossible* without it (proven, not asserted).
+  memory — the Fleet Mind and nightly dream genuinely need it (proven live, not asserted).
 - **Long-horizon, multi-step investigation** — the agent gathers evidence across tools before acting.
 - **Nightly consolidation** with qwen3.7-max — the self-improvement loop and the novel core.
 

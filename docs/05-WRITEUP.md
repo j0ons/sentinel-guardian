@@ -44,7 +44,18 @@ own host. The **same** fleet timeline, three detectors:
 | top-k RAG over the event store | no — surfaced only 1 of 4 needles |
 
 Verified live, 5/5 runs; CLEAR on a clean fleet (no false positive). Reproduce:
-`python src/fleet_mind.py --demo` and `python src/compare_context.py`.
+`python src/fleet_mind.py --demo`.
+
+**And it's not a hand-tuned strawman.** The *actual* qwen3.7-max agent, scored live across
+reverse-shell, bind-shell listener, novel non-signature egress, crypto-miner, external-root-login
+and C2 scenarios (`src/benchmark_live.py`): **100% recall, 0% false alarms, 0 missed** — every
+verdict a real Qwen decision. (A second, offline `src/compare_context.py` *illustrates the logic*
+of why full context beats a 128k window and RAG; it's a deterministic model of the reasoning, not
+a Qwen call — included so the argument is inspectable without an API key.)
+
+**Proof of Qwen Cloud deployment:** `src/verify_qwen.py` makes a live call and shows the
+dashscope-intl server echoing back `model=qwen3.7-max`, with the model self-identifying as
+"Qwen, developed by Alibaba Group's Tongyi Lab." Captured run: `docs/proof-of-qwen.txt`.
 
 ## What Sentinel does (and why it needs Qwen)
 
