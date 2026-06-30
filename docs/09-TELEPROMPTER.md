@@ -101,7 +101,7 @@ that improves itself — and never forgets to be paranoid. Built solo on Qwen Cl
 ## AFTER RECORDING
 1. Trim to <3:00. Upload to YouTube (public or unlisted).
 2. Paste the link into `docs/05-WRITEUP.md` (replace `<ADD YOUTUBE URL>`).
-3. Submit on Devpost — Track 4 (Autopilot Agent). Proof-of-deployment = `src/qwen_client.py`.
+3. Submit on Devpost — Track 5 (EdgeAgent). Proof-of-deployment = `src/qwen_client.py`.
 
 ## VERIFIED COMMANDS (cheat sheet — all dry-run 2026-06-29, use the venv python on CT201/CT202)
 - Fleet Mind:   `SENTINEL_SIM=0 /root/sentinel/.venv/bin/python fleet_mind.py --demo`  → CAMPAIGN_DETECTED ✓

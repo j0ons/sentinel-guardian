@@ -45,7 +45,7 @@ the **safety floor** (attack signatures always win) holds. This is the whole pit
 
 ## Submission checklist (paste into Devpost)
 
-- [ ] **Track:** Autopilot Agent (Track 4).
+- [ ] **Track:** EdgeAgent (Track 5).
 - [ ] **Public repo**, OSS license (MIT) present and detectable.
 - [ ] **Proof of Alibaba Cloud deployment:** direct link to `src/qwen_client.py` (dashscope-intl).
 - [ ] **Architecture diagram:** `docs/architecture.png`.

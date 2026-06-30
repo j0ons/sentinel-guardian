@@ -1,6 +1,6 @@
 # Sentinel — Submission Write-up
 
-> **Track 4 — Autopilot Agent** · Global AI Hackathon Series with Qwen Cloud · solo build, 30 days
+> **Track 5 — EdgeAgent** · Global AI Hackathon Series with Qwen Cloud · solo build, 30 days
 > Repo: https://github.com/j0ons/sentinel-guardian · Demo video: <ADD YOUTUBE URL>
 > Proof of Alibaba Cloud deployment: [`src/qwen_client.py`](../src/qwen_client.py) — wraps the
 > `dashscope-intl` OpenAI-compatible endpoint, models `qwen3.7-max` / `qwen3.6-flash`.
@@ -156,6 +156,6 @@ context is learned (the model recalls a `:9000` connection as the restic backup'
 judgment a stateless model can't make. A deterministic safety floor guarantees attack
 signatures (e.g. a `:4444` reverse shell to a Tor exit) are caught even on a fully-trusting
 host. Live on a Proxmox/Tailscale deployment with a web dashboard. Needs Qwen's 1M context +
-long-horizon tool-calling by design. Track 4. Proof: `src/qwen_client.py`.
+long-horizon tool-calling by design. Track 5 (EdgeAgent). Proof: `src/qwen_client.py`.
 ```
 ```

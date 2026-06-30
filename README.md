@@ -6,7 +6,7 @@ watches a fleet of hosts, investigates multi-step, acts on the edge, and **gets 
 smarter every night** by consolidating its memory — while auditing its own learning so it can
 never be slowly trained to stand down.
 
-Built for the **Global AI Hackathon Series with Qwen Cloud** (Track 4: Autopilot Agent).
+Built for the **Global AI Hackathon Series with Qwen Cloud** (Track 5: EdgeAgent).
 Personal project · solo build.
 
 > Most agents forget. Sentinel sleeps on it and wakes up sharper — but never forgets to be paranoid.
