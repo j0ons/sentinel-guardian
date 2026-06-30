@@ -172,6 +172,9 @@ def main():
     except requests.RequestException:
         print("  cloud not reachable yet — will buffer events until it is")
 
+    import sensors
+    if sensors.available():
+        print("  physical sensors: ACTIVE (PIR motion + tamper switch on GPIO)")
     prev = collectors.snapshot()
     while True:
         time.sleep(INTERVAL)
@@ -181,6 +184,11 @@ def main():
             now = collectors.snapshot()
             events = collectors.diff_events(prev, now)
             prev = now
+            # PHYSICAL sensing: fold any real hardware events (motion / tamper) into the same
+            # perceive->reason->act loop — Sentinel reasons about the physical world too.
+            for s in sensors.poll():
+                events.append(collectors.Event(ts=time.time(), kind=s["kind"],
+                              summary=s["summary"], detail=s.get("detail", {}), host=HOST))
         except Exception as e:                 # never let a bad snapshot kill the agent
             print(f"  [warn] snapshot/diff error, skipping cycle: {e}", flush=True)
             continue

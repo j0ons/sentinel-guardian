@@ -13,7 +13,22 @@ network being up.
 | 5mm LED — green / amber(yellow) / red | 3 | status head |
 | ~330 Ω resistor | 3 | one per LED |
 | Active piezo buzzer (3.3 V) | 1 | pulses on threat |
+| PIR motion sensor (HC-SR501) | 1 | physical perception — motion at the device |
+| Reed/tamper switch (optional) | 1 | enclosure-opened detection |
 | Breadboard + jumper wires | 1 | |
+
+### Physical sensors (so Sentinel perceives the world, not just host telemetry)
+
+| Sensor | GPIO (BCM) | Event it produces |
+|---|---|---|
+| PIR motion (HC-SR501 OUT) | GPIO 24 | `motion` — someone is physically at the device/rack |
+| Tamper reed switch → GND | GPIO 25 | `tamper` — the enclosure was opened |
+
+These feed the **same** perceive→reason→act loop (`edge/sensors.py` → `edge/runner.py`): a
+`motion` event at 3 am on an unattended server is judged against the host's learned context by
+qwen3.7-max, alongside the process/connection events. Physical + digital perception in one mind.
+Test:  `cd edge && python3 sensors.py` (no-op off a Pi). The same agent that kills a reverse
+shell can alert on someone opening the rack.
 
 Even just the **red LED** alone is enough to demonstrate physical local actuation; the rest is polish.
 

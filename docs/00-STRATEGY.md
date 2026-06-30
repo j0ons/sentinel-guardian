@@ -2,6 +2,12 @@
 
 > Personal project. Global AI Hackathon Series with Qwen Cloud.
 > **Deadline: July 9, 2026 @ 2:00pm PDT.** Today: June 9, 2026 → **30 days.**
+>
+> ⚠️ **SUPERSEDED in places (this is the original June-9 plan, kept for history).** Two things
+> changed: (1) the correct track is **Track 5: EdgeAgent**, not Track 4. (2) The Raspberry Pi is
+> the **spine** of the project, not "an upgrade" — Sentinel is an edge device that perceives via
+> sensors, reasons via Qwen cloud, and acts locally on its own hardware (GPIO + a real process
+> kill). The current source of truth is `docs/05-WRITEUP.md` and the root `README.md`.
 
 ---
 

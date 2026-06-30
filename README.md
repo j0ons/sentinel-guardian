@@ -56,13 +56,22 @@ Everything below is measured against the **real qwen3.7-max** agent (re-run it y
 - **Long-horizon, multi-step investigation** — the agent gathers evidence across tools before acting.
 - **Nightly consolidation** with qwen3.7-max — the self-improvement loop and the novel core.
 
-## A physical edge device
+## A physical edge device (Track 5: EdgeAgent)
 
-Sentinel runs on a **Raspberry Pi** and acts on its own hardware: a 3-LED + buzzer status head
-on GPIO fires the verdict locally — green (normal), amber (alert), **red + buzzer (threat
-actuated)** — with no screen and independent of the network. Off a Pi the GPIO layer is a
-silent no-op, so the same edge runner works on a Mac/container too (graceful degradation by
-construction). Wiring + BOM: `docs/06-HARDWARE.md`. Privacy model: `docs/02-PRIVACY.md`.
+Sentinel is a **Raspberry Pi edge device** that **perceives → reasons → acts locally**:
+
+- **Perceives** via edge sensors: an *edge-SOC sensor* reads the host's processes / connections /
+  logins (`edge/collectors.py`), AND real **physical sensors** — a PIR motion sensor and a tamper
+  switch on GPIO (`edge/sensors.py`) — so the same agent reasons about someone physically at the
+  rack, not just digital activity.
+- **Reasons** via Qwen cloud (qwen3.7-max multi-step investigation + nightly consolidation).
+- **Acts locally on its own hardware**: a 3-LED + buzzer status head fires the verdict — green
+  (normal), amber (alert), **red + buzzer (threat)** — and on an armed host it issues a real
+  `os.kill` that **terminates the malicious process** (`edge/runner.py`, `edge/attacker.py`).
+  No screen, independent of the network.
+
+Off a Pi the GPIO/sensor layers are silent no-ops, so the same runner works on a Mac/container
+too (graceful degradation by construction). Wiring + BOM: `docs/06-HARDWARE.md`. Privacy: `docs/02-PRIVACY.md`.
 
 ## Docs
 
