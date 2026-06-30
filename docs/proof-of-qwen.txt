@@ -1,0 +1,25 @@
+PROOF OF QWEN CLOUD DEPLOYMENT — captured live from the production deployment (CT201).
+Re-run it yourself any time:  cd src && SENTINEL_SIM=0 python verify_qwen.py
+
+================================================================
+PROOF OF QWEN CLOUD DEPLOYMENT
+================================================================
+endpoint : https://dashscope-intl.aliyuncs.com/compatible-mode/v1
+models   : reason=qwen3.7-max  fast=qwen3.6-flash
+time     : 2026-06-30 18:21:29 UTC
+----------------------------------------------------------------
+[reasoning] requested model : qwen3.7-max
+[reasoning] server echoed    : qwen3.7-max
+[reasoning] response         : I am Qwen, a large language model developed by Alibaba Group's Tongyi Lab.
+[reasoning] tokens           : prompt=19 completion=335
+----------------------------------------------------------------
+[triage] requested model : qwen3.6-flash
+[triage] server echoed    : qwen3.6-flash
+[triage] response         : I am an AI language model designed to help answer questions and assist with tasks.
+[triage] tokens           : prompt=19 completion=951
+----------------------------------------------------------------
+
+The server echoes back the exact model id requested (qwen3.7-max / qwen3.6-flash) and the
+model self-identifies as "Qwen, developed by Alibaba Group's Tongyi Lab" — confirming this
+project genuinely runs on Qwen models on Alibaba Cloud's dashscope-intl endpoint. Token usage
+is reported per call. The proof-of-deployment code file is src/qwen_client.py.
